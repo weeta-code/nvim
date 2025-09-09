@@ -1,4 +1,2 @@
-require("theprimeagen")
-
--- hello fem
-
+require("victor.core")
+require("victor.lazy")

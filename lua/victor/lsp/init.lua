@@ -16,6 +16,16 @@ vim.api.nvim_create_autocmd("LspAttach", {
   end
 })
 
+vim.keymap.set("n", "[d", function()
+  vim.diagnostic.goto_prev()
+  vim.diagnostic.open_float(nil, { focus = false })
+end, { buffer = bufnr })
+
+vim.keymap.set("n", "]d", function()
+  vim.diagnostic.goto_next()
+  vim.diagnostic.open_float(nil, { focus = false })
+end, { buffer = bufnr })
+
 vim.lsp.config("lua_ls", {
   capabilities = capabilities,
   settings = {

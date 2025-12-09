@@ -1,9 +1,9 @@
 return {
-  "rebelot/kanagawa.nvim",
+  'kepano/flexoki-neovim',
   priority=1000, 
   config = function()
 
-    require("kanagawa").setup({
+    require("flexoki").setup({
       compile = true,
       undercurl = true,
       commentStyle = { italic = false},
@@ -27,6 +27,6 @@ return {
       },
     })
 
-    vim.cmd("colorscheme kanagawa")
-  end 
+    vim.cmd("colorscheme flexoki-dark")
+  end
 }

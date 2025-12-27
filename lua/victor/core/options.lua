@@ -2,6 +2,15 @@ vim.cmd("let g:netrw_liststyle = 3")
 
 local opt = vim.opt
 
+
+-- Disable continue comments
+vim.api.nvim_create_autocmd("BufEnter", {
+    pattern = "*",
+    callback = function()
+        vim.opt.formatoptions = "jql"
+    end,
+})
+
 opt.relativenumber = true
 opt.number = true
 

@@ -14,6 +14,10 @@ return {
         relativenumber = true,
       },
       actions = {
+        change_dir = {
+          enable = true,
+          global = false,
+        },
         open_file = {
           window_picker = {
             enable = false,
@@ -26,6 +30,12 @@ return {
       git = {
         ignore = false,
       },
+      update_focused_file = {
+        enable = true,
+        update_root = true,
+      },
+      respect_buf_cwd = true,
+      sync_root_with_cwd = true
     })
 
     -- some keymaps

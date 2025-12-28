@@ -1,10 +1,17 @@
 vim.g.copilot_no_tab_map = true
 
-vim.keymap.set("i", "<C-h>", 'copilot#Accept("<CR>")', { silent = true, expr = true })
+-- Accept (NO expr, NO functions)
+vim.keymap.set('i', '<C-h>', 'copilot#Accept("\\<CR>")', {
+  expr = true,
+  replace_keycodes = false
+})
 
-vim.keymap.set("i", "<C-j>", 'copilot#Previous()', { silent = true, expr = true })
-vim.keymap.set("i", "<C-k>", 'copilot#Next()', { silent = true, expr = true })
-vim.keymap.set("i", "<C-l>", 'copilot#Dismiss()', { silent = true, expr = true })
+-- Cycle
+vim.keymap.set("i", "<C-j>", "<Plug>(copilot-next)")
+vim.keymap.set("i", "<C-k>", "<Plug>(copilot-previous)")
+
+-- Dismiss
+vim.keymap.set("i", "<C-l>", "<Plug>(copilot-dismiss)")
 
 return {
   "github/copilot.vim",

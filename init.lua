@@ -101,6 +101,9 @@ local plugins = {
   "neovim/nvim-lspconfig",
   "github/copilot.vim",
   "lervag/vimtex",
+
+  -- Colorscheme
+  "vague-theme/vague.nvim",
 }
 
 for _, repo in ipairs(plugins) do
@@ -116,7 +119,8 @@ for _, repo in ipairs(plugins) do
 end
 
 -- Colorscheme
--- NOTE: This config installs `vague.nvim` via the manual pack bootstrap above, so we just `packadd` by directory name.
+-- Installed via the manual pack bootstrap above (repo: vague-theme/vague.nvim).
+-- The directory name is `vague.nvim`, so that's what `packadd` expects.
 pcall(vim.cmd.packadd, "vague.nvim")
 require("vague").setup({})
 vim.cmd.colorscheme("vague")

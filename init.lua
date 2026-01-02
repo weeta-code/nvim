@@ -116,9 +116,10 @@ for _, repo in ipairs(plugins) do
 end
 
 -- Colorscheme
-pcall(vim.cmd.packadd, "flexoki-neovim")
-require("flexoki").setup({ theme = "dragon", background = { dark = "dragon", light = "lotus" } })
-vim.cmd.colorscheme("flexoki-dark")
+-- NOTE: This config installs `vague.nvim` via the manual pack bootstrap above, so we just `packadd` by directory name.
+pcall(vim.cmd.packadd, "vague.nvim")
+require("vague").setup({})
+vim.cmd.colorscheme("vague")
 
 -- UI plugins
 require("nvim-web-devicons").setup({ default = true })
@@ -142,6 +143,39 @@ map("n", "<leader>ee", "<cmd>NvimTreeToggle<CR>", { desc = "Toggle file explorer
 map("n", "<leader>ef", "<cmd>NvimTreeFindFileToggle<CR>", { desc = "Find file in explorer" })
 map("n", "<leader>ec", "<cmd>NvimTreeCollapse<CR>", { desc = "Collapse explorer" })
 map("n", "<leader>er", "<cmd>NvimTreeRefresh<CR>", { desc = "Refresh explorer" })
+
+-- Auto-focus NvimTree on the directory of the current buffer
+local function _nvimtree_focus_current_dir()
+  local ok, api = pcall(require, "nvim-tree.api")
+  if not ok then
+    return
+  end
+
+  -- Ignore special/unnamed buffers
+  local buf = vim.api.nvim_get_current_buf()
+  if vim.bo[buf].buftype ~= "" then
+    return
+  end
+
+  local file = vim.api.nvim_buf_get_name(buf)
+  if file == "" then
+    return
+  end
+
+  -- Ensure NvimTree root follows the active file, then focus the entry
+  pcall(api.tree.change_root_to_node, vim.fn.fnamemodify(file, ":p:h"))
+  pcall(api.tree.find_file, file)
+
+  -- If the tree is visible, focus it
+  local view_ok, view = pcall(require, "nvim-tree.view")
+  if view_ok and view.is_visible() then
+    pcall(api.tree.focus)
+  end
+end
+
+vim.api.nvim_create_autocmd({ "BufEnter", "DirChanged" }, {
+  callback = _nvimtree_focus_current_dir,
+})
 
 -- Telescope
 local telescope = require("telescope")
@@ -296,12 +330,30 @@ dashboard.section.buttons.val = {
 alpha.setup(dashboard.opts)
 vim.cmd([[autocmd FileType alpha setlocal nofoldenable]])
 
--- Copilot
+-- Copilot (github/copilot.vim)
+-- How it works:
+-- - Copilot shows inline "ghost text" suggestions while you type.
+-- - Accept with <C-h>, cycle with <C-j>/<C-k>, dismiss with <C-l>.
+-- - To "ask it" for something, you generally prompt it by writing code/comments
+--   describing what you want, then pause briefly for a suggestion.
+--
+-- Ensure Copilot is enabled by default and don't map <Tab>.
+vim.g.copilot_enabled = 1
 vim.g.copilot_no_tab_map = true
-map("i", "<C-h>", 'copilot#Accept("\\<CR>")', { expr = true, replace_keycodes = false })
-map("i", "<C-j>", "<Plug>(copilot-next)")
-map("i", "<C-k>", "<Plug>(copilot-previous)")
-map("i", "<C-l>", "<Plug>(copilot-dismiss)")
+
+-- Recommended: keep Copilot from taking over completion menu behavior.
+vim.g.copilot_assume_mapped = true
+
+-- Inline suggestion controls
+map("i", "<C-h>", 'copilot#Accept("\\<CR>")', { expr = true, replace_keycodes = false, desc = "Copilot accept" })
+map("i", "<C-j>", "<Plug>(copilot-next)", { desc = "Copilot next suggestion" })
+map("i", "<C-k>", "<Plug>(copilot-previous)", { desc = "Copilot previous suggestion" })
+map("i", "<C-l>", "<Plug>(copilot-dismiss)", { desc = "Copilot dismiss suggestion" })
+
+-- Useful commands / status helpers
+map("n", "<leader>ce", "<cmd>Copilot enable<CR>", { desc = "Copilot enable" })
+map("n", "<leader>cd", "<cmd>Copilot disable<CR>", { desc = "Copilot disable" })
+map("n", "<leader>cs", "<cmd>Copilot status<CR>", { desc = "Copilot status" })
 
 -- Vimtex
 vim.g.tex_flavor = "latex"

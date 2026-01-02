@@ -158,16 +158,18 @@ map("n", "<leader>fr", "<cmd>Telescope oldfiles<cr>", { desc = "Recent files" })
 map("n", "<leader>fs", "<cmd>Telescope live_grep<cr>", { desc = "Live grep" })
 map("n", "<leader>fc", "<cmd>Telescope grep_string<cr>", { desc = "Grep word" })
 
--- Treesitter
-require("nvim-treesitter.configs").setup({
-  ensure_installed = {
-    "bash", "css", "dockerfile", "go", "gomod", "json", "javascript", "typescript", "lua", "vim",
-    "python", "tsx", "yaml", "markdown", "markdown_inline", "html", "latex", "svelte",
-  },
-  highlight = { enable = true },
-  indent = { enable = true },
-  autotag = { enable = true },
-})
+local ts_ok, ts_configs = pcall(require, "nvim-treesitter.configs")
+if ts_ok then
+  ts_configs.setup({
+    ensure_installed = {
+      "bash", "css", "dockerfile", "go", "gomod", "json", "javascript", "typescript", "lua", "vim",
+      "python", "tsx", "yaml", "markdown", "markdown_inline", "html", "latex", "svelte",
+    },
+    highlight = { enable = true },
+    indent = { enable = true },
+    autotag = { enable = true },
+  })
+end
 
 -- Autopairs
 require("nvim-autopairs").setup()

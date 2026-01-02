@@ -290,17 +290,15 @@ for _, server in ipairs(servers) do
   elseif server == "lua_ls" then
     cfg.settings = { Lua = { diagnostics = { globals = { "vim" } }, workspace = { checkThirdParty = false } } }
   elseif server == "sourcekit_lsp" then
-    -- Ensure SourceKit LSP is started correctly for Swift projects
     cfg.cmd = { "sourcekit-lsp" }
     cfg.filetypes = { "swift", "objective-c", "objective-cpp" }
     cfg.root_markers = { "Package.swift", ".git", ".sourcekit-lsp" }
-
-    -- Avoid indexing errors if defaults are missing
     cfg.capabilities.workspace = cfg.capabilities.workspace or {}
     cfg.capabilities.textDocument = cfg.capabilities.textDocument or {}
-
-    -- Keep these minimal/compatible: many servers ignore them, but they shouldn't break startup
     cfg.capabilities.workspace.didChangeWatchedFiles = { dynamicRegistration = true }
+    cfg.root_dir = function(fname)
+      return vim.fs.root(fname, { "Package.swift", ".git", ".sourcekit-lsp" })
+    end
   end
 
   vim.lsp.start(cfg)

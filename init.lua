@@ -1,3 +1,5 @@
+vim.loader.enable()
+
 -- Leader and basics
 vim.g.mapleader = " "
 
@@ -26,6 +28,8 @@ opt.backspace = "indent,eol,start"
 opt.clipboard:append("unnamedplus")
 opt.splitright = true
 opt.splitbelow = true
+opt.termguicolors = true
+vim.g.have_nerd_font = true
 
 -- Keymaps
 local map = vim.keymap.set
@@ -51,7 +55,7 @@ local function ensure(repo, build)
   local name = repo:match("[^/]+$")
   local path = pack_root .. "/" .. name
   if not vim.loop.fs_stat(path) then
-    vim.fn.system({ "git", "clone", "--depth=1", "https://github.com/" .. repo .. ".git", path })
+    vim.system({ "git", "clone", "--depth=1", "https://github.com/" .. repo .. ".git", path }):wait()
     if build then
       build(path)
     end
@@ -112,10 +116,12 @@ for _, repo in ipairs(plugins) do
 end
 
 -- Colorscheme
+pcall(vim.cmd.packadd, "flexoki-neovim")
 require("flexoki").setup({ theme = "dragon", background = { dark = "dragon", light = "lotus" } })
 vim.cmd.colorscheme("flexoki-dark")
 
 -- UI plugins
+require("nvim-web-devicons").setup({ default = true })
 require("lualine").setup({})
 require("bufferline").setup({ options = { mode = "tabs", separator_style = "slant" } })
 require("ibl").setup({ indent = { char = "┊" } })
@@ -209,9 +215,9 @@ local cmp_autopairs = require("nvim-autopairs.completion.cmp")
 cmp.event:on("confirm_done", cmp_autopairs.on_confirm_done())
 
 -- LSP
-local lspconfig = require("lspconfig")
+local lspconfig = vim.lsp.config or require("lspconfig")
 local capabilities = require("cmp_nvim_lsp").default_capabilities()
-local servers = { "lua_ls", "tsserver", "pyright", "gopls", "clangd" }
+local servers = { "lua_ls", "ts_ls", "pyright", "gopls", "clangd" }
 
 vim.api.nvim_create_autocmd("LspAttach", {
   callback = function(args)

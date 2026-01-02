@@ -254,7 +254,8 @@ cmp.event:on("confirm_done", cmp_autopairs.on_confirm_done())
 
 -- LSP (Neovim 0.11+)
 local capabilities = require("cmp_nvim_lsp").default_capabilities()
-local servers = { "lua_ls", "ts_ls", "pyright", "gopls", "clangd" }
+-- `vim.lsp.config` keys use underscores, not hyphens (e.g. `sourcekit_lsp`)
+local servers = { "sourcekit_lsp", "lua_ls", "ts_ls", "pyright", "gopls", "clangd" }
 
 vim.api.nvim_create_autocmd("LspAttach", {
   callback = function(args)
@@ -281,13 +282,25 @@ map("n", "]d", function()
 end)
 
 for _, server in ipairs(servers) do
-  local cfg = vim.deepcopy(vim.lsp.config[server])
+  local cfg = vim.deepcopy(vim.lsp.config[server] or {})
   cfg.capabilities = capabilities
 
   if server == "clangd" then
     cfg.cmd = { "clangd", "--offset-encoding=utf-16" }
   elseif server == "lua_ls" then
     cfg.settings = { Lua = { diagnostics = { globals = { "vim" } }, workspace = { checkThirdParty = false } } }
+  elseif server == "sourcekit_lsp" then
+    -- Ensure SourceKit LSP is started correctly for Swift projects
+    cfg.cmd = { "sourcekit-lsp" }
+    cfg.filetypes = { "swift", "objective-c", "objective-cpp" }
+    cfg.root_markers = { "Package.swift", ".git", ".sourcekit-lsp" }
+
+    -- Avoid indexing errors if defaults are missing
+    cfg.capabilities.workspace = cfg.capabilities.workspace or {}
+    cfg.capabilities.textDocument = cfg.capabilities.textDocument or {}
+
+    -- Keep these minimal/compatible: many servers ignore them, but they shouldn't break startup
+    cfg.capabilities.workspace.didChangeWatchedFiles = { dynamicRegistration = true }
   end
 
   vim.lsp.start(cfg)

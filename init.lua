@@ -252,10 +252,8 @@ cmp.setup({
 local cmp_autopairs = require("nvim-autopairs.completion.cmp")
 cmp.event:on("confirm_done", cmp_autopairs.on_confirm_done())
 
--- LSP (Neovim 0.11+)
+-- LSP (Neovim 0.11+ built-in)
 local capabilities = require("cmp_nvim_lsp").default_capabilities()
--- `vim.lsp.config` keys use underscores, not hyphens (e.g. `sourcekit_lsp`)
-local servers = { "sourcekit_lsp", "lua_ls", "ts_ls", "pyright", "gopls", "clangd" }
 
 vim.api.nvim_create_autocmd("LspAttach", {
   callback = function(args)
@@ -281,28 +279,75 @@ map("n", "]d", function()
   vim.diagnostic.open_float(nil, { focus = false })
 end)
 
-for _, server in ipairs(servers) do
-  local cfg = vim.deepcopy(vim.lsp.config[server] or {})
-  cfg.capabilities = capabilities
+-- Register server configs; we start/attach per-buffer below.
+-- NOTE: `vim.lsp.config` keys use underscores, not hyphens.
+vim.lsp.config.clangd = {
+  capabilities = capabilities,
+  cmd = { "clangd", "--offset-encoding=utf-16" },
+}
 
-  if server == "clangd" then
-    cfg.cmd = { "clangd", "--offset-encoding=utf-16" }
-  elseif server == "lua_ls" then
-    cfg.settings = { Lua = { diagnostics = { globals = { "vim" } }, workspace = { checkThirdParty = false } } }
-  elseif server == "sourcekit_lsp" then
-    cfg.cmd = { "sourcekit-lsp" }
-    cfg.filetypes = { "swift", "objective-c", "objective-cpp" }
-    cfg.root_markers = { "Package.swift", ".git", ".sourcekit-lsp" }
-    cfg.capabilities.workspace = cfg.capabilities.workspace or {}
-    cfg.capabilities.textDocument = cfg.capabilities.textDocument or {}
-    cfg.capabilities.workspace.didChangeWatchedFiles = { dynamicRegistration = true }
-    cfg.root_dir = function(fname)
-      return vim.fs.root(fname, { "Package.swift", ".git", ".sourcekit-lsp" })
+vim.lsp.config.lua_ls = {
+  capabilities = capabilities,
+  settings = { Lua = { diagnostics = { globals = { "vim" } }, workspace = { checkThirdParty = false } } },
+}
+
+-- sourcekit-lsp covers Swift + ObjC/ObjC++
+vim.lsp.config.sourcekit_lsp = {
+  capabilities = capabilities,
+  cmd = { "sourcekit-lsp" },
+  filetypes = { "swift", "objective-c", "objective-cpp" },
+  root_markers = { "Package.swift", ".git", ".sourcekit-lsp" },
+  root_dir = function(fname)
+    return vim.fs.root(fname, { "Package.swift", ".git", ".sourcekit-lsp" })
+  end,
+}
+
+vim.lsp.config.ts_ls = { capabilities = capabilities }
+vim.lsp.config.pyright = { capabilities = capabilities }
+vim.lsp.config.gopls = { capabilities = capabilities }
+
+-- Start/attach per buffer (avoid starting everything at init time)
+vim.api.nvim_create_autocmd("FileType", {
+  callback = function(args)
+    local ft = vim.bo[args.buf].filetype
+
+    local function start(name, cfg)
+      local final = vim.deepcopy(cfg or {})
+      final.bufnr = args.buf
+      vim.lsp.start(final, { name = name })
     end
-  end
 
-  vim.lsp.start(cfg)
-end
+    if ft == "c" or ft == "cpp" or ft == "objc" or ft == "objcpp" then
+      start("clangd", vim.lsp.config.clangd)
+      return
+    end
+
+    if ft == "swift" or ft == "objective-c" or ft == "objective-cpp" then
+      start("sourcekit_lsp", vim.lsp.config.sourcekit_lsp)
+      return
+    end
+
+    if ft == "lua" then
+      start("lua_ls", vim.lsp.config.lua_ls)
+      return
+    end
+
+    if ft == "typescript" or ft == "typescriptreact" or ft == "javascript" or ft == "javascriptreact" then
+      start("ts_ls", vim.lsp.config.ts_ls)
+      return
+    end
+
+    if ft == "python" then
+      start("pyright", vim.lsp.config.pyright)
+      return
+    end
+
+    if ft == "go" then
+      start("gopls", vim.lsp.config.gopls)
+      return
+    end
+  end,
+})
 
 -- Trouble and helpers
 require("trouble").setup({ focus = true })

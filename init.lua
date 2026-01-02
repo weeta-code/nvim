@@ -214,8 +214,7 @@ cmp.setup({
 local cmp_autopairs = require("nvim-autopairs.completion.cmp")
 cmp.event:on("confirm_done", cmp_autopairs.on_confirm_done())
 
--- LSP
-local lspconfig = vim.lsp.config or require("lspconfig")
+-- LSP (Neovim 0.11+)
 local capabilities = require("cmp_nvim_lsp").default_capabilities()
 local servers = { "lua_ls", "ts_ls", "pyright", "gopls", "clangd" }
 
@@ -244,13 +243,16 @@ map("n", "]d", function()
 end)
 
 for _, server in ipairs(servers) do
-  local opts = { capabilities = capabilities }
+  local cfg = vim.deepcopy(vim.lsp.config[server])
+  cfg.capabilities = capabilities
+
   if server == "clangd" then
-    opts.cmd = { "clangd", "--offset-encoding=utf-16" }
+    cfg.cmd = { "clangd", "--offset-encoding=utf-16" }
   elseif server == "lua_ls" then
-    opts.settings = { Lua = { diagnostics = { globals = { "vim" } }, workspace = { checkThirdParty = false } } }
+    cfg.settings = { Lua = { diagnostics = { globals = { "vim" } }, workspace = { checkThirdParty = false } } }
   end
-  lspconfig[server].setup(opts)
+
+  vim.lsp.start(cfg)
 end
 
 -- Trouble and helpers

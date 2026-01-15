@@ -12,7 +12,7 @@ vim.api.nvim_create_autocmd("BufEnter", {
 })
 
 local opt = vim.opt
-opt.relativenumber = true
+-- opt.relativenumber = true
 opt.number = true
 opt.tabstop = 2
 opt.shiftwidth = 2
@@ -21,7 +21,7 @@ opt.autoindent = true
 opt.wrap = false
 opt.ignorecase = true
 opt.smartcase = true
-opt.cursorline = true
+opt.cursorline = false
 opt.background = "dark"
 opt.signcolumn = "yes"
 opt.backspace = "indent,eol,start"
@@ -29,7 +29,7 @@ opt.clipboard:append("unnamedplus")
 opt.splitright = true
 opt.splitbelow = true
 opt.termguicolors = true
-vim.g.have_nerd_font = true
+-- vim.g.have_nerd_font = true
 
 -- Keymaps
 local map = vim.keymap.set
@@ -99,11 +99,13 @@ local plugins = {
   "rafamadriz/friendly-snippets",
   "onsails/lspkind.nvim",
   "neovim/nvim-lspconfig",
-  "github/copilot.vim",
   "lervag/vimtex",
+  "pechorin/any-jump.vim",
+  "ThePrimeagen/harpoon",
+  "folke/flash.nvim",
 
   -- Colorscheme
-  "vague-theme/vague.nvim",
+  "catriverr/inrainbows.vim",
 }
 
 for _, repo in ipairs(plugins) do
@@ -118,12 +120,15 @@ for _, repo in ipairs(plugins) do
   end
 end
 
--- Colorscheme
--- Installed via the manual pack bootstrap above (repo: vague-theme/vague.nvim).
--- The directory name is `vague.nvim`, so that's what `packadd` expects.
-pcall(vim.cmd.packadd, "vague.nvim")
-require("vague").setup({})
-vim.cmd.colorscheme("vague")
+vim.cmd.colorscheme("inrainbows")
+vim.api.nvim_set_hl(0, "Comment", {
+  fg = "#9aa0a6",   -- lighter, readable
+  italic = false
+})
+vim.api.nvim_set_hl(0, "LspReferenceRead", {fg = "#FF0000"})
+vim.api.nvim_set_hl(0, "LspReferenceWrite", {fg = "#FF0000"})
+vim.api.nvim_set_hl(0, "LspReferenceText", {fg = "#FF0000"})
+vim.api.nvim_set_hl(0, "Search", { bg = "#9aa0a6", fg = "#FFFFFF" }) 
 
 -- UI plugins
 require("nvim-web-devicons").setup({ default = true })
@@ -133,6 +138,29 @@ require("ibl").setup({ indent = { char = "┊" } })
 require("gitsigns").setup()
 require("dressing").setup()
 map("n", "<leader>sm", "<cmd>MaximizerToggle<CR>", { desc = "Toggle maximizer" })
+
+-- Harpoon
+local harpoon = require("harpoon")
+harpoon:setup({})
+vim.keymap.set("n", "<leader>h;", function() harpoon:list():add() end)
+vim.keymap.set("n", "<leader>hm", function() harpoon.ui:toggle_quick_menu(harpoon:list()) end)
+
+vim.keymap.set("n", "<leader>h1", function() harpoon:list():select(1) end)
+vim.keymap.set("n", "<leader>h2", function() harpoon:list():select(2) end)
+vim.keymap.set("n", "<leader>h3", function() harpoon:list():select(3) end)
+vim.keymap.set("n", "<leader>h4", function() harpoon:list():select(4) end)
+
+-- Flash
+local flash = require("flash")
+vim.keymap.set({"n", "x", "o"}, "m", function() flash:jump() end)
+vim.keymap.set({"n", "x", "o"}, "M", function() flash:treesitter() end)
+vim.keymap.set("o", "r", function() flash:remote() end)
+vim.keymap.set({"x", "o"}, "R", function() flash:treesitter_search() end)
+vim.keymap.set({"c"}, "<c-s>", function() flash:toggle() end)
+
+-- Toggle previous & next buffers stored within Harpoon list
+vim.keymap.set("n", "<leader>hp", function() harpoon:list():prev() end)
+vim.keymap.set("n", "<leader>hn", function() harpoon:list():next() end)
 
 -- File explorer
 vim.g.loaded_netrw = 1
@@ -254,6 +282,8 @@ cmp.event:on("confirm_done", cmp_autopairs.on_confirm_done())
 
 -- LSP (Neovim 0.11+ built-in)
 local capabilities = require("cmp_nvim_lsp").default_capabilities()
+
+vim.lsp.set_log_level("off")
 
 vim.api.nvim_create_autocmd("LspAttach", {
   callback = function(args)
@@ -390,30 +420,30 @@ dashboard.section.buttons.val = {
 alpha.setup(dashboard.opts)
 vim.cmd([[autocmd FileType alpha setlocal nofoldenable]])
 
--- Copilot (github/copilot.vim)
--- How it works:
--- - Copilot shows inline "ghost text" suggestions while you type.
--- - Accept with <C-h>, cycle with <C-j>/<C-k>, dismiss with <C-l>.
--- - To "ask it" for something, you generally prompt it by writing code/comments
---   describing what you want, then pause briefly for a suggestion.
+-- -- Copilot (github/copilot.vim)
+-- -- How it works:
+-- -- - Copilot shows inline "ghost text" suggestions while you type.
+-- -- - Accept with <C-h>, cycle with <C-j>/<C-k>, dismiss with <C-l>.
+-- -- - To "ask it" for something, you generally prompt it by writing code/comments
+-- --   describing what you want, then pause briefly for a suggestion.
+-- --
+-- -- Ensure Copilot is enabled by default and don't map <Tab>.
+-- vim.g.copilot_enabled = 1
+-- vim.g.copilot_no_tab_map = true
 --
--- Ensure Copilot is enabled by default and don't map <Tab>.
-vim.g.copilot_enabled = 1
-vim.g.copilot_no_tab_map = true
-
--- Recommended: keep Copilot from taking over completion menu behavior.
-vim.g.copilot_assume_mapped = true
-
--- Inline suggestion controls
-map("i", "<C-h>", 'copilot#Accept("\\<CR>")', { expr = true, replace_keycodes = false, desc = "Copilot accept" })
-map("i", "<C-j>", "<Plug>(copilot-next)", { desc = "Copilot next suggestion" })
-map("i", "<C-k>", "<Plug>(copilot-previous)", { desc = "Copilot previous suggestion" })
-map("i", "<C-l>", "<Plug>(copilot-dismiss)", { desc = "Copilot dismiss suggestion" })
-
--- Useful commands / status helpers
-map("n", "<leader>ce", "<cmd>Copilot enable<CR>", { desc = "Copilot enable" })
-map("n", "<leader>cd", "<cmd>Copilot disable<CR>", { desc = "Copilot disable" })
-map("n", "<leader>cs", "<cmd>Copilot status<CR>", { desc = "Copilot status" })
+-- -- Recommended: keep Copilot from taking over completion menu behavior.
+-- vim.g.copilot_assume_mapped = true
+--
+-- -- Inline suggestion controls
+-- map("i", "<C-h>", 'copilot#Accept("\\<CR>")', { expr = true, replace_keycodes = false, desc = "Copilot accept" })
+-- map("i", "<C-j>", "<Plug>(copilot-next)", { desc = "Copilot next suggestion" })
+-- map("i", "<C-k>", "<Plug>(copilot-previous)", { desc = "Copilot previous suggestion" })
+-- map("i", "<C-l>", "<Plug>(copilot-dismiss)", { desc = "Copilot dismiss suggestion" })
+--
+-- -- Useful commands / status helpers
+-- map("n", "<leader>ce", "<cmd>Copilot enable<CR>", { desc = "Copilot enable" })
+-- map("n", "<leader>cd", "<cmd>Copilot disable<CR>", { desc = "Copilot disable" })
+-- map("n", "<leader>cs", "<cmd>Copilot status<CR>", { desc = "Copilot status" })
 
 -- Vimtex
 vim.g.tex_flavor = "latex"

@@ -103,6 +103,9 @@ local plugins = {
   "pechorin/any-jump.vim",
   "ThePrimeagen/harpoon",
   "folke/flash.nvim",
+  "stevearc/quicker.nvim",
+  "mfussenegger/nvim-dap",
+  "stevearc/oil.nvim",
 
   -- Colorscheme
   "catriverr/inrainbows.vim",
@@ -120,15 +123,17 @@ for _, repo in ipairs(plugins) do
   end
 end
 
+-- Colorscheme
 vim.cmd.colorscheme("inrainbows")
 vim.api.nvim_set_hl(0, "Comment", {
   fg = "#9aa0a6",   -- lighter, readable
   italic = false
 })
+
 vim.api.nvim_set_hl(0, "LspReferenceRead", {fg = "#FF0000"})
 vim.api.nvim_set_hl(0, "LspReferenceWrite", {fg = "#FF0000"})
 vim.api.nvim_set_hl(0, "LspReferenceText", {fg = "#FF0000"})
-vim.api.nvim_set_hl(0, "Search", { bg = "#9aa0a6", fg = "#FFFFFF" }) 
+vim.api.nvim_set_hl(0, "Search", { bg = "#9aa0a6", fg = "#FFFFFF" })
 
 -- UI plugins
 require("nvim-web-devicons").setup({ default = true })
@@ -138,6 +143,216 @@ require("ibl").setup({ indent = { char = "┊" } })
 require("gitsigns").setup()
 require("dressing").setup()
 map("n", "<leader>sm", "<cmd>MaximizerToggle<CR>", { desc = "Toggle maximizer" })
+
+-- DAP
+local dap = require("dap")
+dap.adapters.gdb = {
+  type = "executable",
+  command = "gdb",
+  args = { "--interpreter=dap", "--eval-command", "set print pretty on" }
+}
+dap.configurations.c = {
+  {
+    name = "Launch",
+    type = "gdb",
+    request = "launch",
+    program = function()
+      return vim.fn.input('Path to executable: ', vim.fn.getcwd() .. '/', 'file')
+    end,
+    args = {}, -- provide arguments if needed
+    cwd = "${workspaceFolder}",
+    stopAtBeginningOfMainSubprogram = false,
+  },
+  {
+    name = "Select and attach to process",
+    type = "gdb",
+    request = "attach",
+    program = function()
+      return vim.fn.input('Path to executable: ', vim.fn.getcwd() .. '/', 'file')
+    end,
+    pid = function()
+      local name = vim.fn.input('Executable name (filter): ')
+      return require("dap.utils").pick_process({ filter = name })
+    end,
+    cwd = '${workspaceFolder}'
+  },
+  {
+    name = 'Attach to gdbserver :1234',
+    type = 'gdb',
+    request = 'attach',
+    target = 'localhost:1234',
+    program = function()
+      return vim.fn.input('Path to executable: ', vim.fn.getcwd() .. '/', 'file')
+    end,
+    cwd = '${workspaceFolder}'
+  }
+}
+
+-- Oil
+require("oil").setup({
+  default_file_explorer = true,
+  columns = {
+    "icon",
+    -- "permissions",
+    -- "size",
+    "mtime",
+  },
+  buf_options = {
+    buflisted = false,
+    bufhidden = "hide",
+  },
+  win_options = {
+    wrap = false,
+    signcolumn = "no",
+    cursorcolumn = false,
+    foldcolumn = "0",
+    spell = false,
+    list = false,
+    conceallevel = 3,
+    concealcursor = "nvic",
+  },
+  delete_to_trash = true,
+  skip_confirm_for_simple_edits = true,
+  prompt_save_on_select_new_entry = true,
+  cleanup_delay_ms = 2000,
+  lsp_file_methods = {
+    enabled = true,
+    timeout_ms = 1000,
+    -- Set to true to autosave buffers that are updated with LSP willRenameFiles
+    -- Set to "unmodified" to only save unmodified buffers
+    autosave_changes = true,
+  },
+  constrain_cursor = "editable",
+  watch_for_changes = true,
+  keymaps = {
+    ["g?"] = { "actions.show_help", mode = "n" },
+    ["<CR>"] = "actions.select",
+    ["<C-s>"] = { "actions.select", opts = { vertical = true } },
+    ["<C-h>"] = { "actions.select", opts = { horizontal = true } },
+    ["<C-t>"] = { "actions.select", opts = { tab = true } },
+    ["<C-p>"] = "actions.preview",
+    ["<C-c>"] = { "actions.close", mode = "n" },
+    ["<C-l>"] = "actions.refresh",
+    ["-"] = { "actions.parent", mode = "n" },
+    ["_"] = { "actions.open_cwd", mode = "n" },
+    ["`"] = { "actions.cd", mode = "n" },
+    ["g~"] = { "actions.cd", opts = { scope = "tab" }, mode = "n" },
+    ["gs"] = { "actions.change_sort", mode = "n" },
+    ["gx"] = "actions.open_external",
+    ["g."] = { "actions.toggle_hidden", mode = "n" },
+    ["g\\"] = { "actions.toggle_trash", mode = "n" },
+  },
+  -- Set to false to disable all of the above keymaps
+  use_default_keymaps = true,
+  view_options = {
+    show_hidden = true,
+    is_hidden_file = function(name, bufnr)
+      local m = name:match("^%.")
+      return m ~= nil
+    end,
+    is_always_hidden = function(name, bufnr)
+      return false
+    end,
+    -- Sort file names with numbers in a more intuitive order for humans.
+    -- Can be "fast", true, or false. "fast" will turn it off for large directories.
+    natural_order = "true",
+    case_insensitive = false,
+    sort = {
+      { "type", "desc" },
+      { "name", "desc" },
+    },
+    -- Customize the highlight group for the file name
+    highlight_filename = function(entry, is_hidden, is_link_target, is_link_orphan)
+      return nil
+    end,
+  },
+  extra_scp_args = {},
+  extra_s3_args = {},
+  git = {
+    add = function(path)
+      return true
+    end,
+    mv = function(src_path, dest_path)
+      return true
+    end,
+    rm = function(path)
+      return true
+    end,
+  },
+  -- Configuration for the floating window in oil.open_float
+  float = {
+    -- Padding around the floating window
+    padding = 2,
+    -- max_width and max_height can be integers or a float between 0 and 1 (e.g. 0.4 for 40%)
+    max_width = 0,
+    max_height = 0,
+    border = nil,
+    win_options = {
+      winblend = 0,
+    },
+    get_win_title = nil,
+    -- preview_split: Split direction: "auto", "left", "right", "above", "below".
+    preview_split = "auto",
+    override = function(conf)
+      return conf
+    end,
+  },
+  preview_win = {
+    update_on_cursor_moved = true,
+    preview_method = "fast_scratch",
+    -- A function that returns true to disable preview on a file e.g. to avoid lag
+    disable_preview = function(filename)
+      return false
+    end,
+    -- Window-local options to use for preview window buffers
+    win_options = {},
+  },
+  -- Configuration for the floating action confirmation window
+  confirmation = {
+    -- Width dimensions can be integers or a float between 0 and 1 (e.g. 0.4 for 40%)
+    -- min_width and max_width can be a single value or a list of mixed integer/float types.
+    -- max_width = {100, 0.8} means "the lesser of 100 columns or 80% of total"
+    max_width = 0.9,
+    -- min_width = {40, 0.4} means "the greater of 40 columns or 40% of total"
+    min_width = { 40, 0.4 },
+    -- optionally define an integer/float for the exact width of the preview window
+    width = nil,
+    -- Height dimensions can be integers or a float between 0 and 1 (e.g. 0.4 for 40%)
+    -- min_height and max_height can be a single value or a list of mixed integer/float types.
+    -- max_height = {80, 0.9} means "the lesser of 80 columns or 90% of total"
+    max_height = 0.9,
+    -- min_height = {5, 0.1} means "the greater of 5 columns or 10% of total"
+    min_height = { 5, 0.1 },
+    -- optionally define an integer/float for the exact height of the preview window
+    height = nil,
+    border = nil,
+    win_options = {
+      winblend = 0,
+    },
+  },
+  -- Configuration for the floating progress window
+  progress = {
+    max_width = 0.9,
+    min_width = { 40, 0.4 },
+    width = nil,
+    max_height = { 10, 0.9 },
+    min_height = { 5, 0.1 },
+    height = nil,
+    border = nil,
+    minimized_border = "none",
+    win_options = {
+      winblend = 0,
+    },
+  },
+  -- Configuration for the floating SSH window
+  ssh = {
+    border = nil,
+  },
+  -- Configuration for the floating keymaps help window
+  keymaps_help = {
+    border = nil,
+  },
+})
 
 -- Harpoon
 local harpoon = require("harpoon")
@@ -149,6 +364,36 @@ vim.keymap.set("n", "<leader>h1", function() harpoon:list():select(1) end)
 vim.keymap.set("n", "<leader>h2", function() harpoon:list():select(2) end)
 vim.keymap.set("n", "<leader>h3", function() harpoon:list():select(3) end)
 vim.keymap.set("n", "<leader>h4", function() harpoon:list():select(4) end)
+
+-- Quicker
+require("quicker").setup({
+  keys = {
+    {
+      ">",
+      function()
+        require("quicker").expand({ before = 2, after = 2, add_to_existing = true })
+      end,
+      desc = "Expand quickfix context",
+    },
+    {
+      "<",
+      function()
+        require("quicker").collapse()
+      end,
+      desc = "Collapse quickfix context",
+    },
+  },
+})
+vim.keymap.set("n", "<leader>q", function()
+  require("quicker").toggle()
+end, {
+  desc = "Toggle quickfix",
+})
+vim.keymap.set("n", "<leader>l", function()
+  require("quicker").toggle({ loclist = true })
+end, {
+  desc = "Toggle loclist",
+})
 
 -- Flash
 local flash = require("flash")
@@ -235,7 +480,7 @@ if ts_ok then
   ts_configs.setup({
     ensure_installed = {
       "bash", "css", "dockerfile", "go", "gomod", "json", "javascript", "typescript", "lua", "vim",
-      "python", "tsx", "yaml", "markdown", "markdown_inline", "html", "latex", "svelte",
+      "python", "tsx", "yaml", "markdown", "markdown_inline", "html", "latex", "svelte", "c", "cpp"
     },
     highlight = { enable = true },
     indent = { enable = true },
@@ -246,7 +491,7 @@ end
 -- Autopairs
 require("nvim-autopairs").setup()
 
--- Completion
+--:echo nvim_get_runtime_file('parser/*.so', v:true) Completion
 local cmp = require("cmp")
 local luasnip = require("luasnip")
 local lspkind = require("lspkind")
@@ -419,31 +664,6 @@ dashboard.section.buttons.val = {
 
 alpha.setup(dashboard.opts)
 vim.cmd([[autocmd FileType alpha setlocal nofoldenable]])
-
--- -- Copilot (github/copilot.vim)
--- -- How it works:
--- -- - Copilot shows inline "ghost text" suggestions while you type.
--- -- - Accept with <C-h>, cycle with <C-j>/<C-k>, dismiss with <C-l>.
--- -- - To "ask it" for something, you generally prompt it by writing code/comments
--- --   describing what you want, then pause briefly for a suggestion.
--- --
--- -- Ensure Copilot is enabled by default and don't map <Tab>.
--- vim.g.copilot_enabled = 1
--- vim.g.copilot_no_tab_map = true
---
--- -- Recommended: keep Copilot from taking over completion menu behavior.
--- vim.g.copilot_assume_mapped = true
---
--- -- Inline suggestion controls
--- map("i", "<C-h>", 'copilot#Accept("\\<CR>")', { expr = true, replace_keycodes = false, desc = "Copilot accept" })
--- map("i", "<C-j>", "<Plug>(copilot-next)", { desc = "Copilot next suggestion" })
--- map("i", "<C-k>", "<Plug>(copilot-previous)", { desc = "Copilot previous suggestion" })
--- map("i", "<C-l>", "<Plug>(copilot-dismiss)", { desc = "Copilot dismiss suggestion" })
---
--- -- Useful commands / status helpers
--- map("n", "<leader>ce", "<cmd>Copilot enable<CR>", { desc = "Copilot enable" })
--- map("n", "<leader>cd", "<cmd>Copilot disable<CR>", { desc = "Copilot disable" })
--- map("n", "<leader>cs", "<cmd>Copilot status<CR>", { desc = "Copilot status" })
 
 -- Vimtex
 vim.g.tex_flavor = "latex"

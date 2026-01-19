@@ -72,7 +72,6 @@ local plugins = {
   "nvim-lua/plenary.nvim",
   "christoomey/vim-tmux-navigator",
   "nvim-tree/nvim-web-devicons",
-  "nvim-tree/nvim-tree.lua",
   "nvim-telescope/telescope.nvim",
   "nvim-telescope/telescope-fzf-native.nvim",
   "nvim-treesitter/nvim-treesitter",
@@ -258,8 +257,8 @@ require("oil").setup({
     natural_order = "true",
     case_insensitive = false,
     sort = {
-      { "type", "desc" },
-      { "name", "desc" },
+      { "type", "asc" },
+      { "name", "asc" },
     },
     -- Customize the highlight group for the file name
     highlight_filename = function(entry, is_hidden, is_link_target, is_link_orphan)
@@ -281,11 +280,9 @@ require("oil").setup({
   },
   -- Configuration for the floating window in oil.open_float
   float = {
-    -- Padding around the floating window
     padding = 2,
-    -- max_width and max_height can be integers or a float between 0 and 1 (e.g. 0.4 for 40%)
-    max_width = 0,
-    max_height = 0,
+    max_width = 0.4,
+    max_height = 0.6,
     border = nil,
     win_options = {
       winblend = 0,
@@ -407,52 +404,9 @@ vim.keymap.set({"c"}, "<c-s>", function() flash:toggle() end)
 vim.keymap.set("n", "<leader>hp", function() harpoon:list():prev() end)
 vim.keymap.set("n", "<leader>hn", function() harpoon:list():next() end)
 
--- File explorer
-vim.g.loaded_netrw = 1
-vim.g.loaded_netrwPlugin = 1
-require("nvim-tree").setup({
-  view = { width = 35, relativenumber = true },
-  filters = { custom = { ".DS_Store" } },
-  git = { ignore = false },
-  update_focused_file = { enable = true, update_root = true },
-})
-map("n", "<leader>ee", "<cmd>NvimTreeToggle<CR>", { desc = "Toggle file explorer" })
-map("n", "<leader>ef", "<cmd>NvimTreeFindFileToggle<CR>", { desc = "Find file in explorer" })
-map("n", "<leader>ec", "<cmd>NvimTreeCollapse<CR>", { desc = "Collapse explorer" })
-map("n", "<leader>er", "<cmd>NvimTreeRefresh<CR>", { desc = "Refresh explorer" })
-
--- Auto-focus NvimTree on the directory of the current buffer
-local function _nvimtree_focus_current_dir()
-  local ok, api = pcall(require, "nvim-tree.api")
-  if not ok then
-    return
-  end
-
-  -- Ignore special/unnamed buffers
-  local buf = vim.api.nvim_get_current_buf()
-  if vim.bo[buf].buftype ~= "" then
-    return
-  end
-
-  local file = vim.api.nvim_buf_get_name(buf)
-  if file == "" then
-    return
-  end
-
-  -- Ensure NvimTree root follows the active file, then focus the entry
-  pcall(api.tree.change_root_to_node, vim.fn.fnamemodify(file, ":p:h"))
-  pcall(api.tree.find_file, file)
-
-  -- If the tree is visible, focus it
-  local view_ok, view = pcall(require, "nvim-tree.view")
-  if view_ok and view.is_visible() then
-    pcall(api.tree.focus)
-  end
-end
-
-vim.api.nvim_create_autocmd({ "BufEnter", "DirChanged" }, {
-  callback = _nvimtree_focus_current_dir,
-})
+-- File explorer (Oil)
+map("n", "<leader>ee", "<cmd>Oil --float<CR>", { desc = "Open Oil (floating)" })
+map("n", "<leader>ef", "<cmd>Oil<CR>", { desc = "Open Oil (full screen)" })
 
 -- Telescope
 local telescope = require("telescope")
@@ -654,8 +608,8 @@ dashboard.section.header.val = {
 }
 
 dashboard.section.buttons.val = {
-  dashboard.button("e", "  > New File", "<cmd>ene<CR>"),
-  dashboard.button("SPC ee", "  > Toggle file explorer", "<cmd>NvimTreeToggle<CR>"),
+  dashboard.button("e", "  > New File", "<cmd>ene<CR>"),
+  dashboard.button("SPC ee", "  > Toggle file explorer", "<cmd>Oil --float<CR>"),
   dashboard.button("SPC ff", "󰱼  > Find File", "<cmd>Telescope find_files<CR>"),
   dashboard.button("SPC fs", "  > Find Word", "<cmd>Telescope live_grep<CR>"),
   dashboard.button("SPC wr", "󰁯  > Restore Session", "<cmd>SessionRestore<CR>"),

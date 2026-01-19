@@ -75,7 +75,6 @@ local plugins = {
   "nvim-telescope/telescope.nvim",
   "nvim-telescope/telescope-fzf-native.nvim",
   "nvim-treesitter/nvim-treesitter",
-  "windwp/nvim-ts-autotag",
   "windwp/nvim-autopairs",
   "nvim-lualine/lualine.nvim",
   "akinsho/bufferline.nvim",
@@ -87,23 +86,19 @@ local plugins = {
   "rmagatti/auto-session",
   "stevearc/dressing.nvim",
   "szw/vim-maximizer",
-  "kepano/flexoki-neovim",
   "tpope/vim-fugitive",
   "hrsh7th/nvim-cmp",
   "hrsh7th/cmp-nvim-lsp",
   "hrsh7th/cmp-buffer",
   "hrsh7th/cmp-path",
-  "L3MON4D3/LuaSnip",
-  "saadparwaiz1/cmp_luasnip",
-  "rafamadriz/friendly-snippets",
   "onsails/lspkind.nvim",
-  "neovim/nvim-lspconfig",
   "lervag/vimtex",
-  "pechorin/any-jump.vim",
   "ThePrimeagen/harpoon",
   "folke/flash.nvim",
   "stevearc/quicker.nvim",
   "mfussenegger/nvim-dap",
+  "rcarriga/nvim-dap-ui",
+  "nvim-neotest/nvim-nio",
   "stevearc/oil.nvim",
 
   -- Colorscheme
@@ -113,10 +108,6 @@ local plugins = {
 for _, repo in ipairs(plugins) do
   if repo == "nvim-telescope/telescope-fzf-native.nvim" then
     ensure(repo, run_make)
-  elseif repo == "L3MON4D3/LuaSnip" then
-    ensure(repo, function(path)
-      vim.fn.system({ "bash", "-c", "cd " .. path .. " && make install_jsregexp" })
-    end)
   else
     ensure(repo)
   end
@@ -133,18 +124,35 @@ vim.api.nvim_set_hl(0, "LspReferenceRead", {fg = "#FF0000"})
 vim.api.nvim_set_hl(0, "LspReferenceWrite", {fg = "#FF0000"})
 vim.api.nvim_set_hl(0, "LspReferenceText", {fg = "#FF0000"})
 vim.api.nvim_set_hl(0, "Search", { bg = "#9aa0a6", fg = "#FFFFFF" })
+vim.api.nvim_set_hl(0, "GitSignsCurrentLineBlame", { fg = "#7a7a7a" })
 
 -- UI plugins
 require("nvim-web-devicons").setup({ default = true })
 require("lualine").setup({})
 require("bufferline").setup({ options = { mode = "tabs", separator_style = "slant" } })
 require("ibl").setup({ indent = { char = "┊" } })
-require("gitsigns").setup()
+require("gitsigns").setup({
+  current_line_blame = true,
+  current_line_blame_opts = { delay = 100, virt_text_pos = "eol" },
+})
 require("dressing").setup()
 map("n", "<leader>sm", "<cmd>MaximizerToggle<CR>", { desc = "Toggle maximizer" })
 
 -- DAP
 local dap = require("dap")
+local dapui = require("dapui")
+dapui.setup()
+dap.listeners.after.event_initialized["dapui_config"] = function() dapui.open() end
+dap.listeners.before.event_terminated["dapui_config"] = function() dapui.close() end
+dap.listeners.before.event_exited["dapui_config"] = function() dapui.close() end
+map("n", "<leader>du", function() dapui.toggle() end, { desc = "Toggle DAP UI" })
+map("n", "<leader>db", function() dap.toggle_breakpoint() end, { desc = "Toggle breakpoint" })
+map("n", "<leader>dc", function() dap.continue() end, { desc = "Continue" })
+map("n", "<leader>di", function() dap.step_into() end, { desc = "Step into" })
+map("n", "<leader>do", function() dap.step_over() end, { desc = "Step over" })
+map("n", "<leader>dO", function() dap.step_out() end, { desc = "Step out" })
+map("n", "<leader>dr", function() dap.repl.open() end, { desc = "Open REPL" })
+map("n", "<leader>dl", function() dap.run_last() end, { desc = "Run last" })
 dap.adapters.gdb = {
   type = "executable",
   command = "gdb",
@@ -351,6 +359,57 @@ require("oil").setup({
   },
 })
 
+-- Floaterminal
+local floaterm = { buf = nil, win = nil }
+
+local function floaterm_open(fresh)
+  -- Kill old buffer if fresh requested or buffer invalid
+  if fresh or (floaterm.buf and not vim.api.nvim_buf_is_valid(floaterm.buf)) then
+    if floaterm.buf and vim.api.nvim_buf_is_valid(floaterm.buf) then
+      vim.api.nvim_buf_delete(floaterm.buf, { force = true })
+    end
+    floaterm.buf, floaterm.win = nil, nil
+  end
+
+  -- Close if already open
+  if floaterm.win and vim.api.nvim_win_is_valid(floaterm.win) then
+    vim.api.nvim_win_close(floaterm.win, true)
+    floaterm.win = nil
+    return
+  end
+
+  -- Create buffer if needed
+  if not floaterm.buf or not vim.api.nvim_buf_is_valid(floaterm.buf) then
+    floaterm.buf = vim.api.nvim_create_buf(false, true)
+  end
+
+  -- Dimensions
+  local width = math.floor(vim.o.columns * 0.8)
+  local height = math.floor(vim.o.lines * 0.8)
+  local col = math.floor((vim.o.columns - width) / 2)
+  local row = math.floor((vim.o.lines - height) / 2)
+
+  floaterm.win = vim.api.nvim_open_win(floaterm.buf, true, {
+    relative = "editor",
+    width = width,
+    height = height,
+    col = col,
+    row = row,
+    style = "minimal",
+    border = "rounded",
+  })
+
+  -- Start terminal if buffer is empty
+  if vim.bo[floaterm.buf].buftype ~= "terminal" then
+    vim.cmd("terminal")
+  end
+  vim.cmd("startinsert")
+end
+
+map("n", "<leader>tt", function() floaterm_open(false) end, { desc = "Toggle terminal" })
+map("n", "<leader>tn", function() floaterm_open(true) end, { desc = "New terminal" })
+map("t", "<Esc><Esc>", function() floaterm_open(false) end, { desc = "Close terminal" })
+
 -- Harpoon
 local harpoon = require("harpoon")
 harpoon:setup({})
@@ -438,26 +497,18 @@ if ts_ok then
     },
     highlight = { enable = true },
     indent = { enable = true },
-    autotag = { enable = true },
   })
 end
 
 -- Autopairs
 require("nvim-autopairs").setup()
 
---:echo nvim_get_runtime_file('parser/*.so', v:true) Completion
+-- Completion
 local cmp = require("cmp")
-local luasnip = require("luasnip")
 local lspkind = require("lspkind")
-require("luasnip.loaders.from_vscode").lazy_load()
 
 cmp.setup({
   completion = { completeopt = "menu,menuone,preview,noselect" },
-  snippet = {
-    expand = function(args)
-      luasnip.lsp_expand(args.body)
-    end,
-  },
   mapping = cmp.mapping.preset.insert({
     ["<C-k>"] = cmp.mapping.select_prev_item(),
     ["<C-j>"] = cmp.mapping.select_next_item(),
@@ -469,7 +520,6 @@ cmp.setup({
   }),
   sources = cmp.config.sources({
     { name = "nvim_lsp" },
-    { name = "luasnip" },
     { name = "buffer" },
     { name = "path" },
   }),

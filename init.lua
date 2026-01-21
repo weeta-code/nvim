@@ -500,42 +500,37 @@ map("n", "<leader>fr", "<cmd>Telescope oldfiles<cr>", { desc = "Recent files" })
 map("n", "<leader>fs", "<cmd>Telescope live_grep<cr>", { desc = "Live grep" })
 map("n", "<leader>fc", "<cmd>Telescope grep_string<cr>", { desc = "Grep word" })
 
--- Treesitter setup (new nvim-treesitter API)
+-- Treesitter: Neovim 0.11+ has built-in support
+-- Bundled parsers: c, lua, markdown, markdown_inline, query, vim, vimdoc
+-- Use nvim-treesitter only for installing additional parsers
+
+-- Enable treesitter highlighting for all buffers
+vim.api.nvim_create_autocmd("FileType", {
+  callback = function(args)
+    local ok, err = pcall(vim.treesitter.start, args.buf)
+    if not ok and err and not err:match("no parser") then
+      vim.notify("Treesitter error: " .. err, vim.log.levels.WARN)
+    end
+  end,
+})
+
+-- Parser management commands (using nvim-treesitter if available)
 local ts_ok, ts = pcall(require, "nvim-treesitter")
 if ts_ok then
-  ts.setup({
-    ensure_installed = {
-      "bash", "c", "cpp", "css", "dockerfile", "go", "gomod", "html", "javascript",
-      "json", "latex", "lua", "markdown", "markdown_inline", "objc", "python",
-      "svelte", "swift", "tsx", "typescript", "vim", "vimdoc", "yaml",
-    },
-    auto_install = true,
-  })
+  local wanted_parsers = {
+    "bash", "cpp", "css", "dockerfile", "go", "gomod", "html", "javascript",
+    "json", "latex", "objc", "python", "svelte", "swift", "tsx", "typescript", "yaml",
+  }
 
-  -- User commands for parser management
   vim.api.nvim_create_user_command("TSInstall", function(opts)
     ts.install(opts.fargs)
   end, { nargs = "+", desc = "Install treesitter parser(s)" })
 
-  vim.api.nvim_create_user_command("TSUpdate", function()
-    ts.update()
-  end, { desc = "Update all installed parsers" })
-
-  vim.api.nvim_create_user_command("TSInstallInfo", function()
-    local installed = ts.get_installed()
-    print("Installed parsers: " .. table.concat(installed, ", "))
-  end, { desc = "List installed parsers" })
+  vim.api.nvim_create_user_command("TSInstallAll", function()
+    vim.notify("Installing parsers: " .. table.concat(wanted_parsers, ", "), vim.log.levels.INFO)
+    ts.install(wanted_parsers)
+  end, { desc = "Install all wanted parsers" })
 end
-
--- Neovim 0.11+ built-in treesitter highlighting
-vim.api.nvim_create_autocmd("FileType", {
-  callback = function(args)
-    if not vim.b[args.buf].ts_highlight then
-      pcall(vim.treesitter.start, args.buf)
-      vim.b[args.buf].ts_highlight = true
-    end
-  end,
-})
 
 -- Autopairs
 require("nvim-autopairs").setup()

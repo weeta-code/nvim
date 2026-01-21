@@ -11,6 +11,11 @@ vim.api.nvim_create_autocmd("BufEnter", {
   end,
 })
 
+vim.api.nvim_create_autocmd("BufEnter", {
+  pattern ="term://*",
+  command = "startinsert",
+})
+
 local opt = vim.opt
 -- opt.relativenumber = true
 opt.number = true
@@ -44,8 +49,11 @@ map("n", "<leader>sx", "<cmd>close<CR>", { desc = "Close split" })
 map("n", "<leader>to", "<cmd>tabnew<CR>", { desc = "New tab" })
 map("n", "<leader>tx", "<cmd>tabclose<CR>", { desc = "Close tab" })
 map("n", "<leader>tn", "<cmd>tabn<CR>", { desc = "Next tab" })
-map("n", "<leader>tp", "<cmd>tabp<CR>", { desc = "Prev tab" })
-map("n", "<leader>tf", "<cmd>tabnew %<CR>", { desc = "Buffer in tab" })
+map("t", "<C-h>", "<C-\\><C-n><cmd>wincmd h<CR>", { silent = true, desc = "Window left" })
+map("t", "<C-j>", "<C-\\><C-n><cmd>wincmd j<CR>", { silent = true, desc = "Window down" })
+map("t", "<C-k>", "<C-\\><C-n><cmd>wincmd k<CR>", { silent = true, desc = "Window up" })
+map("t", "<C-l>", "<C-\\><C-n><cmd>wincmd l<CR>", { silent = true, desc = "Window right" })
+
 
 -- Native package manager bootstrap
 local pack_root = vim.fn.stdpath("data") .. "/site/pack/plugins/start"
@@ -100,6 +108,7 @@ local plugins = {
   "rcarriga/nvim-dap-ui",
   "nvim-neotest/nvim-nio",
   "stevearc/oil.nvim",
+  "sourcegraph/amp.nvim",
 
   -- Colorscheme
   "catriverr/inrainbows.vim",
@@ -262,7 +271,7 @@ require("oil").setup({
     end,
     -- Sort file names with numbers in a more intuitive order for humans.
     -- Can be "fast", true, or false. "fast" will turn it off for large directories.
-    natural_order = "true",
+    natural_order = true,
     case_insensitive = false,
     sort = {
       { "type", "asc" },
@@ -410,6 +419,9 @@ map("n", "<leader>tt", function() floaterm_open(false) end, { desc = "Toggle ter
 map("n", "<leader>tn", function() floaterm_open(true) end, { desc = "New terminal" })
 map("t", "<Esc><Esc>", function() floaterm_open(false) end, { desc = "Close terminal" })
 
+-- Amp
+require('amp').setup({ auto_start = true, log_level = "info" })
+
 -- Harpoon
 local harpoon = require("harpoon")
 harpoon:setup({})
@@ -453,11 +465,11 @@ end, {
 
 -- Flash
 local flash = require("flash")
-vim.keymap.set({"n", "x", "o"}, "m", function() flash:jump() end)
-vim.keymap.set({"n", "x", "o"}, "M", function() flash:treesitter() end)
-vim.keymap.set("o", "r", function() flash:remote() end)
-vim.keymap.set({"x", "o"}, "R", function() flash:treesitter_search() end)
-vim.keymap.set({"c"}, "<c-s>", function() flash:toggle() end)
+vim.keymap.set({"n", "x", "o"}, "m", function() flash.jump() end)
+vim.keymap.set({"n", "x", "o"}, "M", function() flash.treesitter() end)
+vim.keymap.set("o", "r", function() flash.remote() end)
+vim.keymap.set({"x", "o"}, "R", function() flash.treesitter_search() end)
+vim.keymap.set({"c"}, "<c-s>", function() flash.toggle() end)
 
 -- Toggle previous & next buffers stored within Harpoon list
 vim.keymap.set("n", "<leader>hp", function() harpoon:list():prev() end)
@@ -488,17 +500,42 @@ map("n", "<leader>fr", "<cmd>Telescope oldfiles<cr>", { desc = "Recent files" })
 map("n", "<leader>fs", "<cmd>Telescope live_grep<cr>", { desc = "Live grep" })
 map("n", "<leader>fc", "<cmd>Telescope grep_string<cr>", { desc = "Grep word" })
 
-local ts_ok, ts_configs = pcall(require, "nvim-treesitter.configs")
+-- Treesitter setup (new nvim-treesitter API)
+local ts_ok, ts = pcall(require, "nvim-treesitter")
 if ts_ok then
-  ts_configs.setup({
+  ts.setup({
     ensure_installed = {
-      "bash", "css", "dockerfile", "go", "gomod", "json", "javascript", "typescript", "lua", "vim",
-      "python", "tsx", "yaml", "markdown", "markdown_inline", "html", "latex", "svelte", "c", "cpp"
+      "bash", "c", "cpp", "css", "dockerfile", "go", "gomod", "html", "javascript",
+      "json", "latex", "lua", "markdown", "markdown_inline", "objc", "python",
+      "svelte", "swift", "tsx", "typescript", "vim", "vimdoc", "yaml",
     },
-    highlight = { enable = true },
-    indent = { enable = true },
+    auto_install = true,
   })
+
+  -- User commands for parser management
+  vim.api.nvim_create_user_command("TSInstall", function(opts)
+    ts.install(opts.fargs)
+  end, { nargs = "+", desc = "Install treesitter parser(s)" })
+
+  vim.api.nvim_create_user_command("TSUpdate", function()
+    ts.update()
+  end, { desc = "Update all installed parsers" })
+
+  vim.api.nvim_create_user_command("TSInstallInfo", function()
+    local installed = ts.get_installed()
+    print("Installed parsers: " .. table.concat(installed, ", "))
+  end, { desc = "List installed parsers" })
 end
+
+-- Neovim 0.11+ built-in treesitter highlighting
+vim.api.nvim_create_autocmd("FileType", {
+  callback = function(args)
+    if not vim.b[args.buf].ts_highlight then
+      pcall(vim.treesitter.start, args.buf)
+      vim.b[args.buf].ts_highlight = true
+    end
+  end,
+})
 
 -- Autopairs
 require("nvim-autopairs").setup()
@@ -558,75 +595,35 @@ map("n", "]d", function()
   vim.diagnostic.open_float(nil, { focus = false })
 end)
 
--- Register server configs; we start/attach per-buffer below.
--- NOTE: `vim.lsp.config` keys use underscores, not hyphens.
-vim.lsp.config.clangd = {
+-- LSP server configs (Neovim 0.11+ native)
+vim.lsp.config('clangd', {
   capabilities = capabilities,
   cmd = { "clangd", "--offset-encoding=utf-16" },
-}
+})
 
-vim.lsp.config.lua_ls = {
+vim.lsp.config('lua_ls', {
   capabilities = capabilities,
   settings = { Lua = { diagnostics = { globals = { "vim" } }, workspace = { checkThirdParty = false } } },
-}
+})
 
--- sourcekit-lsp covers Swift + ObjC/ObjC++
-vim.lsp.config.sourcekit_lsp = {
+vim.lsp.config('sourcekit', {
   capabilities = capabilities,
   cmd = { "sourcekit-lsp" },
   filetypes = { "swift", "objective-c", "objective-cpp" },
   root_markers = { "Package.swift", ".git", ".sourcekit-lsp" },
-  root_dir = function(fname)
-    return vim.fs.root(fname, { "Package.swift", ".git", ".sourcekit-lsp" })
-  end,
-}
-
-vim.lsp.config.ts_ls = { capabilities = capabilities }
-vim.lsp.config.pyright = { capabilities = capabilities }
-vim.lsp.config.gopls = { capabilities = capabilities }
-
--- Start/attach per buffer (avoid starting everything at init time)
-vim.api.nvim_create_autocmd("FileType", {
-  callback = function(args)
-    local ft = vim.bo[args.buf].filetype
-
-    local function start(name, cfg)
-      local final = vim.deepcopy(cfg or {})
-      final.bufnr = args.buf
-      vim.lsp.start(final, { name = name })
-    end
-
-    if ft == "c" or ft == "cpp" or ft == "objc" or ft == "objcpp" then
-      start("clangd", vim.lsp.config.clangd)
-      return
-    end
-
-    if ft == "swift" or ft == "objective-c" or ft == "objective-cpp" then
-      start("sourcekit_lsp", vim.lsp.config.sourcekit_lsp)
-      return
-    end
-
-    if ft == "lua" then
-      start("lua_ls", vim.lsp.config.lua_ls)
-      return
-    end
-
-    if ft == "typescript" or ft == "typescriptreact" or ft == "javascript" or ft == "javascriptreact" then
-      start("ts_ls", vim.lsp.config.ts_ls)
-      return
-    end
-
-    if ft == "python" then
-      start("pyright", vim.lsp.config.pyright)
-      return
-    end
-
-    if ft == "go" then
-      start("gopls", vim.lsp.config.gopls)
-      return
-    end
-  end,
 })
+
+vim.lsp.config('ts_ls', { capabilities = capabilities })
+vim.lsp.config('pyright', { capabilities = capabilities })
+vim.lsp.config('gopls', { capabilities = capabilities })
+
+-- Enable LSP servers (auto-attaches on matching filetypes)
+vim.lsp.enable('clangd')
+vim.lsp.enable('lua_ls')
+vim.lsp.enable('sourcekit')
+vim.lsp.enable('ts_ls')
+vim.lsp.enable('pyright')
+vim.lsp.enable('gopls')
 
 -- Trouble and helpers
 require("trouble").setup({ focus = true })

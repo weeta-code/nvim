@@ -515,9 +515,10 @@ vim.api.nvim_create_autocmd("FileType", {
 local ts_ok, ts = pcall(require, "nvim-treesitter")
 if ts_ok then
   -- Core parsers you want installed (beyond the bundled ones)
+  -- Note: swift/latex are slow to compile (need grammar generation), install manually if needed
   local wanted_parsers = {
     "bash", "cpp", "css", "dockerfile", "go", "gomod", "html", "javascript",
-    "json", "latex", "objc", "python", "svelte", "swift", "tsx", "typescript", "yaml",
+    "json", "python", "tsx", "typescript", "yaml",
   }
 
   -- Check if a parser is installed by looking for its .so file

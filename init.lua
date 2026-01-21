@@ -507,21 +507,40 @@ map("n", "<leader>fc", "<cmd>Telescope grep_string<cr>", { desc = "Grep word" })
 -- Enable treesitter highlighting for all buffers
 vim.api.nvim_create_autocmd("FileType", {
   callback = function(args)
-    local ok, err = pcall(vim.treesitter.start, args.buf)
-    if not ok and err and not err:match("no parser") then
-      vim.notify("Treesitter error: " .. err, vim.log.levels.WARN)
-    end
+    pcall(vim.treesitter.start, args.buf)
   end,
 })
 
--- Parser management commands (using nvim-treesitter if available)
+-- Parser management (using nvim-treesitter if available)
 local ts_ok, ts = pcall(require, "nvim-treesitter")
 if ts_ok then
+  -- Core parsers you want installed (beyond the bundled ones)
   local wanted_parsers = {
     "bash", "cpp", "css", "dockerfile", "go", "gomod", "html", "javascript",
     "json", "latex", "objc", "python", "svelte", "swift", "tsx", "typescript", "yaml",
   }
 
+  -- Check if a parser is installed by looking for its .so file
+  local function parser_installed(lang)
+    local paths = vim.api.nvim_get_runtime_file("parser/" .. lang .. ".so", false)
+    return #paths > 0
+  end
+
+  -- Auto-install missing parsers on startup
+  vim.defer_fn(function()
+    local missing = {}
+    for _, lang in ipairs(wanted_parsers) do
+      if not parser_installed(lang) then
+        table.insert(missing, lang)
+      end
+    end
+    if #missing > 0 then
+      vim.notify("Installing missing parsers: " .. table.concat(missing, ", "), vim.log.levels.INFO)
+      ts.install(missing)
+    end
+  end, 500)
+
+  -- User commands
   vim.api.nvim_create_user_command("TSInstall", function(opts)
     ts.install(opts.fargs)
   end, { nargs = "+", desc = "Install treesitter parser(s)" })
@@ -530,6 +549,19 @@ if ts_ok then
     vim.notify("Installing parsers: " .. table.concat(wanted_parsers, ", "), vim.log.levels.INFO)
     ts.install(wanted_parsers)
   end, { desc = "Install all wanted parsers" })
+
+  vim.api.nvim_create_user_command("TSInstallInfo", function()
+    local installed, not_installed = {}, {}
+    for _, lang in ipairs(wanted_parsers) do
+      if parser_installed(lang) then
+        table.insert(installed, lang)
+      else
+        table.insert(not_installed, lang)
+      end
+    end
+    print("Installed: " .. (#installed > 0 and table.concat(installed, ", ") or "none"))
+    print("Missing: " .. (#not_installed > 0 and table.concat(not_installed, ", ") or "none"))
+  end, { desc = "Show parser install status" })
 end
 
 -- Autopairs

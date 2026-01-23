@@ -11,6 +11,11 @@ vim.api.nvim_create_autocmd("BufEnter", {
   end,
 })
 
+vim.api.nvim_create_autocmd("BufEnter", {
+  pattern = "term://*",
+  command = "startinsert",
+})
+
 local opt = vim.opt
 -- opt.relativenumber = true
 opt.number = true
@@ -44,8 +49,11 @@ map("n", "<leader>sx", "<cmd>close<CR>", { desc = "Close split" })
 map("n", "<leader>to", "<cmd>tabnew<CR>", { desc = "New tab" })
 map("n", "<leader>tx", "<cmd>tabclose<CR>", { desc = "Close tab" })
 map("n", "<leader>tn", "<cmd>tabn<CR>", { desc = "Next tab" })
-map("n", "<leader>tp", "<cmd>tabp<CR>", { desc = "Prev tab" })
-map("n", "<leader>tf", "<cmd>tabnew %<CR>", { desc = "Buffer in tab" })
+map("t", "<C-h>", "<C-\\><C-n><cmd>wincmd h<CR>", { silent = true, desc = "Window left" })
+map("t", "<C-j>", "<C-\\><C-n><cmd>wincmd j<CR>", { silent = true, desc = "Window down" })
+map("t", "<C-k>", "<C-\\><C-n><cmd>wincmd k<CR>", { silent = true, desc = "Window up" })
+map("t", "<C-l>", "<C-\\><C-n><cmd>wincmd l<CR>", { silent = true, desc = "Window right" })
+
 
 -- Native package manager bootstrap
 local pack_root = vim.fn.stdpath("data") .. "/site/pack/plugins/start"
@@ -72,11 +80,9 @@ local plugins = {
   "nvim-lua/plenary.nvim",
   "christoomey/vim-tmux-navigator",
   "nvim-tree/nvim-web-devicons",
-  "nvim-tree/nvim-tree.lua",
   "nvim-telescope/telescope.nvim",
   "nvim-telescope/telescope-fzf-native.nvim",
   "nvim-treesitter/nvim-treesitter",
-  "windwp/nvim-ts-autotag",
   "windwp/nvim-autopairs",
   "nvim-lualine/lualine.nvim",
   "akinsho/bufferline.nvim",
@@ -88,21 +94,23 @@ local plugins = {
   "rmagatti/auto-session",
   "stevearc/dressing.nvim",
   "szw/vim-maximizer",
-  "kepano/flexoki-neovim",
   "tpope/vim-fugitive",
   "hrsh7th/nvim-cmp",
   "hrsh7th/cmp-nvim-lsp",
   "hrsh7th/cmp-buffer",
   "hrsh7th/cmp-path",
-  "L3MON4D3/LuaSnip",
-  "saadparwaiz1/cmp_luasnip",
-  "rafamadriz/friendly-snippets",
   "onsails/lspkind.nvim",
-  "neovim/nvim-lspconfig",
   "lervag/vimtex",
-  "pechorin/any-jump.vim",
   "ThePrimeagen/harpoon",
   "folke/flash.nvim",
+  "stevearc/quicker.nvim",
+  "mfussenegger/nvim-dap",
+  "rcarriga/nvim-dap-ui",
+  "nvim-neotest/nvim-nio",
+  "stevearc/oil.nvim",
+  "stevearc/aerial.nvim",
+  "sindrets/diffview.nvim",
+  "NickvanDyke/opencode.nvim",
 
   -- Colorscheme
   "catriverr/inrainbows.vim",
@@ -111,33 +119,399 @@ local plugins = {
 for _, repo in ipairs(plugins) do
   if repo == "nvim-telescope/telescope-fzf-native.nvim" then
     ensure(repo, run_make)
-  elseif repo == "L3MON4D3/LuaSnip" then
-    ensure(repo, function(path)
-      vim.fn.system({ "bash", "-c", "cd " .. path .. " && make install_jsregexp" })
-    end)
   else
     ensure(repo)
   end
 end
 
+-- Colorscheme
 vim.cmd.colorscheme("inrainbows")
 vim.api.nvim_set_hl(0, "Comment", {
-  fg = "#9aa0a6",   -- lighter, readable
+  fg = "#9aa0a6", -- lighter, readable
   italic = false
 })
-vim.api.nvim_set_hl(0, "LspReferenceRead", {fg = "#FF0000"})
-vim.api.nvim_set_hl(0, "LspReferenceWrite", {fg = "#FF0000"})
-vim.api.nvim_set_hl(0, "LspReferenceText", {fg = "#FF0000"})
-vim.api.nvim_set_hl(0, "Search", { bg = "#9aa0a6", fg = "#FFFFFF" }) 
+
+vim.api.nvim_set_hl(0, "LspReferenceRead", { fg = "#FF0000" })
+vim.api.nvim_set_hl(0, "LspReferenceWrite", { fg = "#FF0000" })
+vim.api.nvim_set_hl(0, "LspReferenceText", { fg = "#FF0000" })
+vim.api.nvim_set_hl(0, "Search", { bg = "#9aa0a6", fg = "#FFFFFF" })
+vim.api.nvim_set_hl(0, "GitSignsCurrentLineBlame", { fg = "#7a7a7a" })
 
 -- UI plugins
 require("nvim-web-devicons").setup({ default = true })
 require("lualine").setup({})
 require("bufferline").setup({ options = { mode = "tabs", separator_style = "slant" } })
 require("ibl").setup({ indent = { char = "┊" } })
-require("gitsigns").setup()
+require("gitsigns").setup({
+  current_line_blame = true,
+  current_line_blame_opts = { delay = 100, virt_text_pos = "eol" },
+})
 require("dressing").setup()
+
+-- Diffview (IDE-like diff viewer)
+require("diffview").setup({
+  enhanced_diff_hl = true,
+  view = {
+    default = { layout = "diff2_horizontal" },
+    merge_tool = { layout = "diff3_mixed" },
+  },
+})
+
+-- Git workflow keymaps (<leader>g prefix)
+local gs = require("gitsigns")
+
+-- Hunk navigation (bracket-style)
+map("n", "]g", gs.next_hunk, { desc = "Next hunk" })
+map("n", "[g", gs.prev_hunk, { desc = "Prev hunk" })
+
+-- Gitsigns operations
+map("n", "<leader>gp", gs.preview_hunk, { desc = "Preview hunk" })
+map("n", "<leader>gs", gs.stage_hunk, { desc = "Stage hunk" })
+map("n", "<leader>gu", gs.undo_stage_hunk, { desc = "Undo stage hunk" })
+map("n", "<leader>gr", gs.reset_hunk, { desc = "Reset hunk" })
+map("n", "<leader>gS", gs.stage_buffer, { desc = "Stage buffer" })
+map("n", "<leader>gR", gs.reset_buffer, { desc = "Reset buffer" })
+map("n", "<leader>gb", gs.blame_line, { desc = "Blame line (full)" })
+map("n", "<leader>gB", function() gs.blame_line({ full = true }) end, { desc = "Blame line (popup)" })
+
+-- Visual mode hunk operations
+map("v", "<leader>gs", function() gs.stage_hunk({ vim.fn.line("."), vim.fn.line("v") }) end, { desc = "Stage selection" })
+map("v", "<leader>gr", function() gs.reset_hunk({ vim.fn.line("."), vim.fn.line("v") }) end, { desc = "Reset selection" })
+
+-- Diffview operations
+map("n", "<leader>gd", "<cmd>DiffviewOpen<CR>", { desc = "Diff view (index)" })
+map("n", "<leader>gD", "<cmd>DiffviewOpen HEAD~1<CR>", { desc = "Diff vs last commit" })
+map("n", "<leader>gh", "<cmd>DiffviewFileHistory %<CR>", { desc = "File history" })
+map("n", "<leader>gH", "<cmd>DiffviewFileHistory<CR>", { desc = "Branch history" })
+map("n", "<leader>gq", "<cmd>DiffviewClose<CR>", { desc = "Close diff view" })
+
+-- Fugitive operations
+map("n", "<leader>gg", "<cmd>Git<CR>", { desc = "Git status" })
+map("n", "<leader>gc", "<cmd>Git commit<CR>", { desc = "Git commit" })
+map("n", "<leader>gP", "<cmd>Git push<CR>", { desc = "Git push" })
+map("n", "<leader>gl", "<cmd>Git pull<CR>", { desc = "Git pull" })
+map("n", "<leader>gL", "<cmd>Git log --oneline<CR>", { desc = "Git log" })
 map("n", "<leader>sm", "<cmd>MaximizerToggle<CR>", { desc = "Toggle maximizer" })
+
+-- DAP
+local dap = require("dap")
+local dapui = require("dapui")
+dapui.setup()
+dap.listeners.after.event_initialized["dapui_config"] = function() dapui.open() end
+dap.listeners.before.event_terminated["dapui_config"] = function() dapui.close() end
+dap.listeners.before.event_exited["dapui_config"] = function() dapui.close() end
+map("n", "<leader>du", function() dapui.toggle() end, { desc = "Toggle DAP UI" })
+map("n", "<leader>db", function() dap.toggle_breakpoint() end, { desc = "Toggle breakpoint" })
+map("n", "<leader>dc", function() dap.continue() end, { desc = "Continue" })
+map("n", "<leader>di", function() dap.step_into() end, { desc = "Step into" })
+map("n", "<leader>do", function() dap.step_over() end, { desc = "Step over" })
+map("n", "<leader>dO", function() dap.step_out() end, { desc = "Step out" })
+map("n", "<leader>dr", function() dap.repl.open() end, { desc = "Open REPL" })
+map("n", "<leader>dl", function() dap.run_last() end, { desc = "Run last" })
+dap.adapters.gdb = {
+  type = "executable",
+  command = "gdb",
+  args = { "--interpreter=dap", "--eval-command", "set print pretty on" }
+}
+dap.configurations.c = {
+  {
+    name = "Launch",
+    type = "gdb",
+    request = "launch",
+    program = function()
+      return vim.fn.input('Path to executable: ', vim.fn.getcwd() .. '/', 'file')
+    end,
+    args = {}, -- provide arguments if needed
+    cwd = "${workspaceFolder}",
+    stopAtBeginningOfMainSubprogram = false,
+  },
+  {
+    name = "Select and attach to process",
+    type = "gdb",
+    request = "attach",
+    program = function()
+      return vim.fn.input('Path to executable: ', vim.fn.getcwd() .. '/', 'file')
+    end,
+    pid = function()
+      local name = vim.fn.input('Executable name (filter): ')
+      return require("dap.utils").pick_process({ filter = name })
+    end,
+    cwd = '${workspaceFolder}'
+  },
+  {
+    name = 'Attach to gdbserver :1234',
+    type = 'gdb',
+    request = 'attach',
+    target = 'localhost:1234',
+    program = function()
+      return vim.fn.input('Path to executable: ', vim.fn.getcwd() .. '/', 'file')
+    end,
+    cwd = '${workspaceFolder}'
+  }
+}
+
+-- Oil
+require("oil").setup({
+  default_file_explorer = true,
+  columns = {
+    "icon",
+    -- "permissions",
+    -- "size",
+    "mtime",
+  },
+  buf_options = {
+    buflisted = false,
+    bufhidden = "hide",
+  },
+  win_options = {
+    wrap = false,
+    signcolumn = "no",
+    cursorcolumn = false,
+    foldcolumn = "0",
+    spell = false,
+    list = false,
+    conceallevel = 3,
+    concealcursor = "nvic",
+  },
+  delete_to_trash = true,
+  skip_confirm_for_simple_edits = true,
+  prompt_save_on_select_new_entry = true,
+  cleanup_delay_ms = 2000,
+  lsp_file_methods = {
+    enabled = true,
+    timeout_ms = 1000,
+    -- Set to true to autosave buffers that are updated with LSP willRenameFiles
+    -- Set to "unmodified" to only save unmodified buffers
+    autosave_changes = true,
+  },
+  constrain_cursor = "editable",
+  watch_for_changes = true,
+  keymaps = {
+    ["g?"] = { "actions.show_help", mode = "n" },
+    ["<CR>"] = "actions.select",
+    ["<C-s>"] = { "actions.select", opts = { vertical = true } },
+    ["<C-h>"] = { "actions.select", opts = { horizontal = true } },
+    ["<C-t>"] = { "actions.select", opts = { tab = true } },
+    ["<C-p>"] = "actions.preview",
+    ["<C-c>"] = { "actions.close", mode = "n" },
+    ["<C-l>"] = "actions.refresh",
+    ["-"] = { "actions.parent", mode = "n" },
+    ["_"] = { "actions.open_cwd", mode = "n" },
+    ["`"] = { "actions.cd", mode = "n" },
+    ["g~"] = { "actions.cd", opts = { scope = "tab" }, mode = "n" },
+    ["gs"] = { "actions.change_sort", mode = "n" },
+    ["gx"] = "actions.open_external",
+    ["g."] = { "actions.toggle_hidden", mode = "n" },
+    ["g\\"] = { "actions.toggle_trash", mode = "n" },
+  },
+  -- Set to false to disable all of the above keymaps
+  use_default_keymaps = true,
+  view_options = {
+    show_hidden = true,
+    is_hidden_file = function(name, bufnr)
+      local m = name:match("^%.")
+      return m ~= nil
+    end,
+    is_always_hidden = function(name, bufnr)
+      return false
+    end,
+    -- Sort file names with numbers in a more intuitive order for humans.
+    -- Can be "fast", true, or false. "fast" will turn it off for large directories.
+    natural_order = true,
+    case_insensitive = false,
+    sort = {
+      { "type", "asc" },
+      { "name", "asc" },
+    },
+    -- Customize the highlight group for the file name
+    highlight_filename = function(entry, is_hidden, is_link_target, is_link_orphan)
+      return nil
+    end,
+  },
+  extra_scp_args = {},
+  extra_s3_args = {},
+  git = {
+    add = function(path)
+      return true
+    end,
+    mv = function(src_path, dest_path)
+      return true
+    end,
+    rm = function(path)
+      return true
+    end,
+  },
+  -- Configuration for the floating window in oil.open_float
+  float = {
+    padding = 2,
+    max_width = 0.4,
+    max_height = 0.6,
+    border = nil,
+    win_options = {
+      winblend = 0,
+    },
+    get_win_title = nil,
+    -- preview_split: Split direction: "auto", "left", "right", "above", "below".
+    preview_split = "auto",
+    override = function(conf)
+      return conf
+    end,
+  },
+  preview_win = {
+    update_on_cursor_moved = true,
+    preview_method = "fast_scratch",
+    -- A function that returns true to disable preview on a file e.g. to avoid lag
+    disable_preview = function(filename)
+      return false
+    end,
+    -- Window-local options to use for preview window buffers
+    win_options = {},
+  },
+  -- Configuration for the floating action confirmation window
+  confirmation = {
+    -- Width dimensions can be integers or a float between 0 and 1 (e.g. 0.4 for 40%)
+    -- min_width and max_width can be a single value or a list of mixed integer/float types.
+    -- max_width = {100, 0.8} means "the lesser of 100 columns or 80% of total"
+    max_width = 0.9,
+    -- min_width = {40, 0.4} means "the greater of 40 columns or 40% of total"
+    min_width = { 40, 0.4 },
+    -- optionally define an integer/float for the exact width of the preview window
+    width = nil,
+    -- Height dimensions can be integers or a float between 0 and 1 (e.g. 0.4 for 40%)
+    -- min_height and max_height can be a single value or a list of mixed integer/float types.
+    -- max_height = {80, 0.9} means "the lesser of 80 columns or 90% of total"
+    max_height = 0.9,
+    -- min_height = {5, 0.1} means "the greater of 5 columns or 10% of total"
+    min_height = { 5, 0.1 },
+    -- optionally define an integer/float for the exact height of the preview window
+    height = nil,
+    border = nil,
+    win_options = {
+      winblend = 0,
+    },
+  },
+  -- Configuration for the floating progress window
+  progress = {
+    max_width = 0.9,
+    min_width = { 40, 0.4 },
+    width = nil,
+    max_height = { 10, 0.9 },
+    min_height = { 5, 0.1 },
+    height = nil,
+    border = nil,
+    minimized_border = "none",
+    win_options = {
+      winblend = 0,
+    },
+  },
+  -- Configuration for the floating SSH window
+  ssh = {
+    border = nil,
+  },
+  -- Configuration for the floating keymaps help window
+  keymaps_help = {
+    border = nil,
+  },
+})
+
+-- Aerial (code outline/symbol navigation)
+require("aerial").setup({
+  backends = { "lsp", "treesitter", "markdown", "man" },
+  layout = {
+    max_width = { 40, 0.2 },
+    min_width = 20,
+    default_direction = "prefer_right",
+  },
+  attach_mode = "global",
+  close_on_select = false,
+  show_guides = true,
+  filter_kind = false,
+  keymaps = {
+    ["?"] = "actions.show_help",
+    ["g?"] = "actions.show_help",
+    ["<CR>"] = "actions.jump",
+    ["<C-v>"] = "actions.jump_vsplit",
+    ["<C-s>"] = "actions.jump_split",
+    ["<C-p>"] = "actions.scroll",
+    ["<C-j>"] = "actions.down_and_scroll",
+    ["<C-k>"] = "actions.up_and_scroll",
+    ["{"] = "actions.prev",
+    ["}"] = "actions.next",
+    ["[["] = "actions.prev_up",
+    ["]]"] = "actions.next_up",
+    ["q"] = "actions.close",
+    ["o"] = "actions.tree_toggle",
+    ["O"] = "actions.tree_toggle_recursive",
+    ["l"] = "actions.tree_open",
+    ["h"] = "actions.tree_close",
+    ["zR"] = "actions.tree_open_all",
+    ["zM"] = "actions.tree_close_all",
+  },
+})
+-- Aerial keymaps (leader-based)
+map("n", "<leader>aa", "<cmd>AerialToggle!<CR>", { desc = "Toggle aerial" })
+map("n", "<leader>af", "<cmd>AerialToggle float<CR>", { desc = "Aerial float" })
+map("n", "<leader>an", "<cmd>AerialNavToggle<CR>", { desc = "Aerial nav" })
+-- Symbol navigation (bracket-style like [d ]d for diagnostics)
+map("n", "[s", "<cmd>AerialPrev<CR>", { desc = "Prev symbol" })
+map("n", "]s", "<cmd>AerialNext<CR>", { desc = "Next symbol" })
+map("n", "[[", "<cmd>AerialPrevUp<CR>", { desc = "Prev symbol (up)" })
+map("n", "]]", "<cmd>AerialNextUp<CR>", { desc = "Next symbol (up)" })
+
+-- Floaterminal
+local floaterm = { buf = nil, win = nil }
+
+local function floaterm_open(fresh)
+  -- Kill old buffer if fresh requested or buffer invalid
+  if fresh or (floaterm.buf and not vim.api.nvim_buf_is_valid(floaterm.buf)) then
+    if floaterm.buf and vim.api.nvim_buf_is_valid(floaterm.buf) then
+      vim.api.nvim_buf_delete(floaterm.buf, { force = true })
+    end
+    floaterm.buf, floaterm.win = nil, nil
+  end
+
+  -- Close if already open
+  if floaterm.win and vim.api.nvim_win_is_valid(floaterm.win) then
+    vim.api.nvim_win_close(floaterm.win, true)
+    floaterm.win = nil
+    return
+  end
+
+  -- Create buffer if needed
+  if not floaterm.buf or not vim.api.nvim_buf_is_valid(floaterm.buf) then
+    floaterm.buf = vim.api.nvim_create_buf(false, true)
+  end
+
+  -- Dimensions
+  local width = math.floor(vim.o.columns * 0.8)
+  local height = math.floor(vim.o.lines * 0.8)
+  local col = math.floor((vim.o.columns - width) / 2)
+  local row = math.floor((vim.o.lines - height) / 2)
+
+  floaterm.win = vim.api.nvim_open_win(floaterm.buf, true, {
+    relative = "editor",
+    width = width,
+    height = height,
+    col = col,
+    row = row,
+    style = "minimal",
+    border = "rounded",
+  })
+
+  -- Start terminal if buffer is empty
+  if vim.bo[floaterm.buf].buftype ~= "terminal" then
+    vim.cmd("terminal")
+  end
+  vim.cmd("startinsert")
+end
+
+map("n", "<leader>tt", function() floaterm_open(false) end, { desc = "Toggle terminal" })
+map("n", "<leader>tn", function() floaterm_open(true) end, { desc = "New terminal" })
+map("t", "<C-q>", function() floaterm_open(false) end, { desc = "Close terminal" })
+
+map("n", "<leader>oa", function() require('opencode').ask() end, { desc = "opencode ask"})
+map("n", "<leader>os", function() require('opencode').select() end, { desc = "opencode select"})
+map("n", "<leader>oo", function() require('opencode').operator() end, { desc = "opencode operator"})
 
 -- Harpoon
 local harpoon = require("harpoon")
@@ -150,64 +524,51 @@ vim.keymap.set("n", "<leader>h2", function() harpoon:list():select(2) end)
 vim.keymap.set("n", "<leader>h3", function() harpoon:list():select(3) end)
 vim.keymap.set("n", "<leader>h4", function() harpoon:list():select(4) end)
 
+-- Quicker
+require("quicker").setup({
+  keys = {
+    {
+      ">",
+      function()
+        require("quicker").expand({ before = 2, after = 2, add_to_existing = true })
+      end,
+      desc = "Expand quickfix context",
+    },
+    {
+      "<",
+      function()
+        require("quicker").collapse()
+      end,
+      desc = "Collapse quickfix context",
+    },
+  },
+})
+vim.keymap.set("n", "<leader>q", function()
+  require("quicker").toggle()
+end, {
+  desc = "Toggle quickfix",
+})
+vim.keymap.set("n", "<leader>l", function()
+  require("quicker").toggle({ loclist = true })
+end, {
+  desc = "Toggle loclist",
+})
+
 -- Flash
 local flash = require("flash")
-vim.keymap.set({"n", "x", "o"}, "m", function() flash:jump() end)
-vim.keymap.set({"n", "x", "o"}, "M", function() flash:treesitter() end)
-vim.keymap.set("o", "r", function() flash:remote() end)
-vim.keymap.set({"x", "o"}, "R", function() flash:treesitter_search() end)
-vim.keymap.set({"c"}, "<c-s>", function() flash:toggle() end)
+vim.keymap.set({ "n", "x", "o" }, "m", function() flash.jump() end)
+vim.keymap.set({ "n", "x", "o" }, "M", function() flash.treesitter() end)
+vim.keymap.set("o", "r", function() flash.remote() end)
+vim.keymap.set({ "x", "o" }, "R", function() flash.treesitter_search() end)
+vim.keymap.set({ "c" }, "<c-s>", function() flash.toggle() end)
 
 -- Toggle previous & next buffers stored within Harpoon list
 vim.keymap.set("n", "<leader>hp", function() harpoon:list():prev() end)
 vim.keymap.set("n", "<leader>hn", function() harpoon:list():next() end)
 
--- File explorer
-vim.g.loaded_netrw = 1
-vim.g.loaded_netrwPlugin = 1
-require("nvim-tree").setup({
-  view = { width = 35, relativenumber = true },
-  filters = { custom = { ".DS_Store" } },
-  git = { ignore = false },
-  update_focused_file = { enable = true, update_root = true },
-})
-map("n", "<leader>ee", "<cmd>NvimTreeToggle<CR>", { desc = "Toggle file explorer" })
-map("n", "<leader>ef", "<cmd>NvimTreeFindFileToggle<CR>", { desc = "Find file in explorer" })
-map("n", "<leader>ec", "<cmd>NvimTreeCollapse<CR>", { desc = "Collapse explorer" })
-map("n", "<leader>er", "<cmd>NvimTreeRefresh<CR>", { desc = "Refresh explorer" })
-
--- Auto-focus NvimTree on the directory of the current buffer
-local function _nvimtree_focus_current_dir()
-  local ok, api = pcall(require, "nvim-tree.api")
-  if not ok then
-    return
-  end
-
-  -- Ignore special/unnamed buffers
-  local buf = vim.api.nvim_get_current_buf()
-  if vim.bo[buf].buftype ~= "" then
-    return
-  end
-
-  local file = vim.api.nvim_buf_get_name(buf)
-  if file == "" then
-    return
-  end
-
-  -- Ensure NvimTree root follows the active file, then focus the entry
-  pcall(api.tree.change_root_to_node, vim.fn.fnamemodify(file, ":p:h"))
-  pcall(api.tree.find_file, file)
-
-  -- If the tree is visible, focus it
-  local view_ok, view = pcall(require, "nvim-tree.view")
-  if view_ok and view.is_visible() then
-    pcall(api.tree.focus)
-  end
-end
-
-vim.api.nvim_create_autocmd({ "BufEnter", "DirChanged" }, {
-  callback = _nvimtree_focus_current_dir,
-})
+-- File explorer (Oil)
+map("n", "<leader>ee", "<cmd>Oil --float<CR>", { desc = "Open Oil (floating)" })
+map("n", "<leader>ef", "<cmd>Oil<CR>", { desc = "Open Oil (full screen)" })
 
 -- Telescope
 local telescope = require("telescope")
@@ -230,17 +591,69 @@ map("n", "<leader>fr", "<cmd>Telescope oldfiles<cr>", { desc = "Recent files" })
 map("n", "<leader>fs", "<cmd>Telescope live_grep<cr>", { desc = "Live grep" })
 map("n", "<leader>fc", "<cmd>Telescope grep_string<cr>", { desc = "Grep word" })
 
-local ts_ok, ts_configs = pcall(require, "nvim-treesitter.configs")
+-- Treesitter: Neovim 0.11+ has built-in support
+-- Bundled parsers: c, lua, markdown, markdown_inline, query, vim, vimdoc
+-- Use nvim-treesitter only for installing additional parsers
+
+-- Enable treesitter highlighting for all buffers
+vim.api.nvim_create_autocmd("FileType", {
+  callback = function(args)
+    pcall(vim.treesitter.start, args.buf)
+  end,
+})
+
+-- Parser management (using nvim-treesitter if available)
+local ts_ok, ts = pcall(require, "nvim-treesitter")
 if ts_ok then
-  ts_configs.setup({
-    ensure_installed = {
-      "bash", "css", "dockerfile", "go", "gomod", "json", "javascript", "typescript", "lua", "vim",
-      "python", "tsx", "yaml", "markdown", "markdown_inline", "html", "latex", "svelte",
-    },
-    highlight = { enable = true },
-    indent = { enable = true },
-    autotag = { enable = true },
-  })
+  -- Core parsers you want installed (beyond the bundled ones)
+  -- Note: swift/latex are slow to compile (need grammar generation), install manually if needed
+  local wanted_parsers = {
+    "bash", "cpp", "css", "dockerfile", "go", "gomod", "html", "javascript",
+    "json", "python", "tsx", "typescript", "yaml",
+  }
+
+  -- Check if a parser is installed by looking for its .so file
+  local function parser_installed(lang)
+    local paths = vim.api.nvim_get_runtime_file("parser/" .. lang .. ".so", false)
+    return #paths > 0
+  end
+
+  -- Auto-install missing parsers on startup
+  vim.defer_fn(function()
+    local missing = {}
+    for _, lang in ipairs(wanted_parsers) do
+      if not parser_installed(lang) then
+        table.insert(missing, lang)
+      end
+    end
+    if #missing > 0 then
+      vim.notify("Installing missing parsers: " .. table.concat(missing, ", "), vim.log.levels.INFO)
+      ts.install(missing)
+    end
+  end, 500)
+
+  -- User commands
+  vim.api.nvim_create_user_command("TSInstall", function(opts)
+    ts.install(opts.fargs)
+  end, { nargs = "+", desc = "Install treesitter parser(s)" })
+
+  vim.api.nvim_create_user_command("TSInstallAll", function()
+    vim.notify("Installing parsers: " .. table.concat(wanted_parsers, ", "), vim.log.levels.INFO)
+    ts.install(wanted_parsers)
+  end, { desc = "Install all wanted parsers" })
+
+  vim.api.nvim_create_user_command("TSInstallInfo", function()
+    local installed, not_installed = {}, {}
+    for _, lang in ipairs(wanted_parsers) do
+      if parser_installed(lang) then
+        table.insert(installed, lang)
+      else
+        table.insert(not_installed, lang)
+      end
+    end
+    print("Installed: " .. (#installed > 0 and table.concat(installed, ", ") or "none"))
+    print("Missing: " .. (#not_installed > 0 and table.concat(not_installed, ", ") or "none"))
+  end, { desc = "Show parser install status" })
 end
 
 -- Autopairs
@@ -248,17 +661,10 @@ require("nvim-autopairs").setup()
 
 -- Completion
 local cmp = require("cmp")
-local luasnip = require("luasnip")
 local lspkind = require("lspkind")
-require("luasnip.loaders.from_vscode").lazy_load()
 
 cmp.setup({
   completion = { completeopt = "menu,menuone,preview,noselect" },
-  snippet = {
-    expand = function(args)
-      luasnip.lsp_expand(args.body)
-    end,
-  },
   mapping = cmp.mapping.preset.insert({
     ["<C-k>"] = cmp.mapping.select_prev_item(),
     ["<C-j>"] = cmp.mapping.select_next_item(),
@@ -270,7 +676,6 @@ cmp.setup({
   }),
   sources = cmp.config.sources({
     { name = "nvim_lsp" },
-    { name = "luasnip" },
     { name = "buffer" },
     { name = "path" },
   }),
@@ -309,75 +714,35 @@ map("n", "]d", function()
   vim.diagnostic.open_float(nil, { focus = false })
 end)
 
--- Register server configs; we start/attach per-buffer below.
--- NOTE: `vim.lsp.config` keys use underscores, not hyphens.
-vim.lsp.config.clangd = {
+-- LSP server configs (Neovim 0.11+ native)
+vim.lsp.config('clangd', {
   capabilities = capabilities,
   cmd = { "clangd", "--offset-encoding=utf-16" },
-}
+})
 
-vim.lsp.config.lua_ls = {
+vim.lsp.config('lua_ls', {
   capabilities = capabilities,
   settings = { Lua = { diagnostics = { globals = { "vim" } }, workspace = { checkThirdParty = false } } },
-}
+})
 
--- sourcekit-lsp covers Swift + ObjC/ObjC++
-vim.lsp.config.sourcekit_lsp = {
+vim.lsp.config('sourcekit', {
   capabilities = capabilities,
   cmd = { "sourcekit-lsp" },
   filetypes = { "swift", "objective-c", "objective-cpp" },
   root_markers = { "Package.swift", ".git", ".sourcekit-lsp" },
-  root_dir = function(fname)
-    return vim.fs.root(fname, { "Package.swift", ".git", ".sourcekit-lsp" })
-  end,
-}
-
-vim.lsp.config.ts_ls = { capabilities = capabilities }
-vim.lsp.config.pyright = { capabilities = capabilities }
-vim.lsp.config.gopls = { capabilities = capabilities }
-
--- Start/attach per buffer (avoid starting everything at init time)
-vim.api.nvim_create_autocmd("FileType", {
-  callback = function(args)
-    local ft = vim.bo[args.buf].filetype
-
-    local function start(name, cfg)
-      local final = vim.deepcopy(cfg or {})
-      final.bufnr = args.buf
-      vim.lsp.start(final, { name = name })
-    end
-
-    if ft == "c" or ft == "cpp" or ft == "objc" or ft == "objcpp" then
-      start("clangd", vim.lsp.config.clangd)
-      return
-    end
-
-    if ft == "swift" or ft == "objective-c" or ft == "objective-cpp" then
-      start("sourcekit_lsp", vim.lsp.config.sourcekit_lsp)
-      return
-    end
-
-    if ft == "lua" then
-      start("lua_ls", vim.lsp.config.lua_ls)
-      return
-    end
-
-    if ft == "typescript" or ft == "typescriptreact" or ft == "javascript" or ft == "javascriptreact" then
-      start("ts_ls", vim.lsp.config.ts_ls)
-      return
-    end
-
-    if ft == "python" then
-      start("pyright", vim.lsp.config.pyright)
-      return
-    end
-
-    if ft == "go" then
-      start("gopls", vim.lsp.config.gopls)
-      return
-    end
-  end,
 })
+
+vim.lsp.config('ts_ls', { capabilities = capabilities })
+vim.lsp.config('pyright', { capabilities = capabilities })
+vim.lsp.config('gopls', { capabilities = capabilities })
+
+-- Enable LSP servers (auto-attaches on matching filetypes)
+vim.lsp.enable('clangd')
+vim.lsp.enable('lua_ls')
+vim.lsp.enable('sourcekit')
+vim.lsp.enable('ts_ls')
+vim.lsp.enable('pyright')
+vim.lsp.enable('gopls')
 
 -- Trouble and helpers
 require("trouble").setup({ focus = true })
@@ -409,8 +774,8 @@ dashboard.section.header.val = {
 }
 
 dashboard.section.buttons.val = {
-  dashboard.button("e", "  > New File", "<cmd>ene<CR>"),
-  dashboard.button("SPC ee", "  > Toggle file explorer", "<cmd>NvimTreeToggle<CR>"),
+  dashboard.button("e", "  > New File", "<cmd>ene<CR>"),
+  dashboard.button("SPC ee", "  > Toggle file explorer", "<cmd>Oil --float<CR>"),
   dashboard.button("SPC ff", "󰱼  > Find File", "<cmd>Telescope find_files<CR>"),
   dashboard.button("SPC fs", "  > Find Word", "<cmd>Telescope live_grep<CR>"),
   dashboard.button("SPC wr", "󰁯  > Restore Session", "<cmd>SessionRestore<CR>"),
@@ -419,31 +784,6 @@ dashboard.section.buttons.val = {
 
 alpha.setup(dashboard.opts)
 vim.cmd([[autocmd FileType alpha setlocal nofoldenable]])
-
--- -- Copilot (github/copilot.vim)
--- -- How it works:
--- -- - Copilot shows inline "ghost text" suggestions while you type.
--- -- - Accept with <C-h>, cycle with <C-j>/<C-k>, dismiss with <C-l>.
--- -- - To "ask it" for something, you generally prompt it by writing code/comments
--- --   describing what you want, then pause briefly for a suggestion.
--- --
--- -- Ensure Copilot is enabled by default and don't map <Tab>.
--- vim.g.copilot_enabled = 1
--- vim.g.copilot_no_tab_map = true
---
--- -- Recommended: keep Copilot from taking over completion menu behavior.
--- vim.g.copilot_assume_mapped = true
---
--- -- Inline suggestion controls
--- map("i", "<C-h>", 'copilot#Accept("\\<CR>")', { expr = true, replace_keycodes = false, desc = "Copilot accept" })
--- map("i", "<C-j>", "<Plug>(copilot-next)", { desc = "Copilot next suggestion" })
--- map("i", "<C-k>", "<Plug>(copilot-previous)", { desc = "Copilot previous suggestion" })
--- map("i", "<C-l>", "<Plug>(copilot-dismiss)", { desc = "Copilot dismiss suggestion" })
---
--- -- Useful commands / status helpers
--- map("n", "<leader>ce", "<cmd>Copilot enable<CR>", { desc = "Copilot enable" })
--- map("n", "<leader>cd", "<cmd>Copilot disable<CR>", { desc = "Copilot disable" })
--- map("n", "<leader>cs", "<cmd>Copilot status<CR>", { desc = "Copilot status" })
 
 -- Vimtex
 vim.g.tex_flavor = "latex"

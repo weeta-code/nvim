@@ -49,10 +49,10 @@ map("n", "<leader>sx", "<cmd>close<CR>", { desc = "Close split" })
 map("n", "<leader>to", "<cmd>tabnew<CR>", { desc = "New tab" })
 map("n", "<leader>tx", "<cmd>tabclose<CR>", { desc = "Close tab" })
 map("n", "<leader>tn", "<cmd>tabn<CR>", { desc = "Next tab" })
-map("t", "<C-h>", "<C-\\><C-n><cmd>wincmd h<CR>", { silent = true, desc = "Window left" })
-map("t", "<C-j>", "<C-\\><C-n><cmd>wincmd j<CR>", { silent = true, desc = "Window down" })
-map("t", "<C-k>", "<C-\\><C-n><cmd>wincmd k<CR>", { silent = true, desc = "Window up" })
-map("t", "<C-l>", "<C-\\><C-n><cmd>wincmd l<CR>", { silent = true, desc = "Window right" })
+map("t", "<C-h>", "<C-\\><C-n><cmd>TmuxNavigateLeft<CR>", { silent = true, desc = "Navigate left" })
+map("t", "<C-j>", "<C-\\><C-n><cmd>TmuxNavigateDown<CR>", { silent = true, desc = "Navigate down" })
+map("t", "<C-k>", "<C-\\><C-n><cmd>TmuxNavigateUp<CR>", { silent = true, desc = "Navigate up" })
+map("t", "<C-l>", "<C-\\><C-n><cmd>TmuxNavigateRight<CR>", { silent = true, desc = "Navigate right" })
 
 
 -- Native package manager bootstrap
@@ -111,6 +111,7 @@ local plugins = {
   "stevearc/aerial.nvim",
   "sindrets/diffview.nvim",
   "NickvanDyke/opencode.nvim",
+  "sphamba/smear-cursor.nvim",
 
   -- Colorscheme
   "catriverr/inrainbows.vim",
@@ -147,6 +148,13 @@ require("gitsigns").setup({
   current_line_blame_opts = { delay = 100, virt_text_pos = "eol" },
 })
 require("dressing").setup()
+require("smear_cursor").setup({
+  opts = {
+    smear_between_buffers = true,
+    smear_between_neighbor_lines = true,
+    smear_insert_mode = true,
+  },
+})
 
 -- Diffview (IDE-like diff viewer)
 require("diffview").setup({
@@ -500,13 +508,13 @@ local function floaterm_open(fresh)
 
   -- Start terminal if buffer is empty
   if vim.bo[floaterm.buf].buftype ~= "terminal" then
-    vim.cmd("terminal")
+    vim.fn.termopen(vim.o.shell)
   end
   vim.cmd("startinsert")
 end
 
 map("n", "<leader>tt", function() floaterm_open(false) end, { desc = "Toggle terminal" })
-map("n", "<leader>tn", function() floaterm_open(true) end, { desc = "New terminal" })
+map("n", "<leader>tm", function() floaterm_open(true) end, { desc = "New terminal" })
 map("t", "<C-q>", function() floaterm_open(false) end, { desc = "Close terminal" })
 
 map("n", "<leader>oa", function() require('opencode').ask() end, { desc = "opencode ask"})
@@ -755,7 +763,10 @@ map("n", "<leader>xt", "<cmd>Trouble todo toggle<CR>", { desc = "Todos" })
 require("which-key").setup({})
 
 -- Session management
-require("auto-session").setup({ auto_restore_enabled = false })
+require("auto-session").setup({
+  auto_restore_enabled = false,
+  cwd_change_handling = false,
+})
 map("n", "<leader>wr", "<cmd>SessionRestore<CR>", { desc = "Restore session" })
 map("n", "<leader>ws", "<cmd>SessionSave<CR>", { desc = "Save session" })
 

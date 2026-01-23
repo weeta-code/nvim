@@ -12,7 +12,7 @@ vim.api.nvim_create_autocmd("BufEnter", {
 })
 
 vim.api.nvim_create_autocmd("BufEnter", {
-  pattern ="term://*",
+  pattern = "term://*",
   command = "startinsert",
 })
 
@@ -108,7 +108,9 @@ local plugins = {
   "rcarriga/nvim-dap-ui",
   "nvim-neotest/nvim-nio",
   "stevearc/oil.nvim",
-  "sourcegraph/amp.nvim",
+  "stevearc/aerial.nvim",
+  "sindrets/diffview.nvim",
+  "NickvanDyke/opencode.nvim",
 
   -- Colorscheme
   "catriverr/inrainbows.vim",
@@ -125,13 +127,13 @@ end
 -- Colorscheme
 vim.cmd.colorscheme("inrainbows")
 vim.api.nvim_set_hl(0, "Comment", {
-  fg = "#9aa0a6",   -- lighter, readable
+  fg = "#9aa0a6", -- lighter, readable
   italic = false
 })
 
-vim.api.nvim_set_hl(0, "LspReferenceRead", {fg = "#FF0000"})
-vim.api.nvim_set_hl(0, "LspReferenceWrite", {fg = "#FF0000"})
-vim.api.nvim_set_hl(0, "LspReferenceText", {fg = "#FF0000"})
+vim.api.nvim_set_hl(0, "LspReferenceRead", { fg = "#FF0000" })
+vim.api.nvim_set_hl(0, "LspReferenceWrite", { fg = "#FF0000" })
+vim.api.nvim_set_hl(0, "LspReferenceText", { fg = "#FF0000" })
 vim.api.nvim_set_hl(0, "Search", { bg = "#9aa0a6", fg = "#FFFFFF" })
 vim.api.nvim_set_hl(0, "GitSignsCurrentLineBlame", { fg = "#7a7a7a" })
 
@@ -145,6 +147,50 @@ require("gitsigns").setup({
   current_line_blame_opts = { delay = 100, virt_text_pos = "eol" },
 })
 require("dressing").setup()
+
+-- Diffview (IDE-like diff viewer)
+require("diffview").setup({
+  enhanced_diff_hl = true,
+  view = {
+    default = { layout = "diff2_horizontal" },
+    merge_tool = { layout = "diff3_mixed" },
+  },
+})
+
+-- Git workflow keymaps (<leader>g prefix)
+local gs = require("gitsigns")
+
+-- Hunk navigation (bracket-style)
+map("n", "]g", gs.next_hunk, { desc = "Next hunk" })
+map("n", "[g", gs.prev_hunk, { desc = "Prev hunk" })
+
+-- Gitsigns operations
+map("n", "<leader>gp", gs.preview_hunk, { desc = "Preview hunk" })
+map("n", "<leader>gs", gs.stage_hunk, { desc = "Stage hunk" })
+map("n", "<leader>gu", gs.undo_stage_hunk, { desc = "Undo stage hunk" })
+map("n", "<leader>gr", gs.reset_hunk, { desc = "Reset hunk" })
+map("n", "<leader>gS", gs.stage_buffer, { desc = "Stage buffer" })
+map("n", "<leader>gR", gs.reset_buffer, { desc = "Reset buffer" })
+map("n", "<leader>gb", gs.blame_line, { desc = "Blame line (full)" })
+map("n", "<leader>gB", function() gs.blame_line({ full = true }) end, { desc = "Blame line (popup)" })
+
+-- Visual mode hunk operations
+map("v", "<leader>gs", function() gs.stage_hunk({ vim.fn.line("."), vim.fn.line("v") }) end, { desc = "Stage selection" })
+map("v", "<leader>gr", function() gs.reset_hunk({ vim.fn.line("."), vim.fn.line("v") }) end, { desc = "Reset selection" })
+
+-- Diffview operations
+map("n", "<leader>gd", "<cmd>DiffviewOpen<CR>", { desc = "Diff view (index)" })
+map("n", "<leader>gD", "<cmd>DiffviewOpen HEAD~1<CR>", { desc = "Diff vs last commit" })
+map("n", "<leader>gh", "<cmd>DiffviewFileHistory %<CR>", { desc = "File history" })
+map("n", "<leader>gH", "<cmd>DiffviewFileHistory<CR>", { desc = "Branch history" })
+map("n", "<leader>gq", "<cmd>DiffviewClose<CR>", { desc = "Close diff view" })
+
+-- Fugitive operations
+map("n", "<leader>gg", "<cmd>Git<CR>", { desc = "Git status" })
+map("n", "<leader>gc", "<cmd>Git commit<CR>", { desc = "Git commit" })
+map("n", "<leader>gP", "<cmd>Git push<CR>", { desc = "Git push" })
+map("n", "<leader>gl", "<cmd>Git pull<CR>", { desc = "Git pull" })
+map("n", "<leader>gL", "<cmd>Git log --oneline<CR>", { desc = "Git log" })
 map("n", "<leader>sm", "<cmd>MaximizerToggle<CR>", { desc = "Toggle maximizer" })
 
 -- DAP
@@ -368,6 +414,50 @@ require("oil").setup({
   },
 })
 
+-- Aerial (code outline/symbol navigation)
+require("aerial").setup({
+  backends = { "lsp", "treesitter", "markdown", "man" },
+  layout = {
+    max_width = { 40, 0.2 },
+    min_width = 20,
+    default_direction = "prefer_right",
+  },
+  attach_mode = "global",
+  close_on_select = false,
+  show_guides = true,
+  filter_kind = false,
+  keymaps = {
+    ["?"] = "actions.show_help",
+    ["g?"] = "actions.show_help",
+    ["<CR>"] = "actions.jump",
+    ["<C-v>"] = "actions.jump_vsplit",
+    ["<C-s>"] = "actions.jump_split",
+    ["<C-p>"] = "actions.scroll",
+    ["<C-j>"] = "actions.down_and_scroll",
+    ["<C-k>"] = "actions.up_and_scroll",
+    ["{"] = "actions.prev",
+    ["}"] = "actions.next",
+    ["[["] = "actions.prev_up",
+    ["]]"] = "actions.next_up",
+    ["q"] = "actions.close",
+    ["o"] = "actions.tree_toggle",
+    ["O"] = "actions.tree_toggle_recursive",
+    ["l"] = "actions.tree_open",
+    ["h"] = "actions.tree_close",
+    ["zR"] = "actions.tree_open_all",
+    ["zM"] = "actions.tree_close_all",
+  },
+})
+-- Aerial keymaps (leader-based)
+map("n", "<leader>aa", "<cmd>AerialToggle!<CR>", { desc = "Toggle aerial" })
+map("n", "<leader>af", "<cmd>AerialToggle float<CR>", { desc = "Aerial float" })
+map("n", "<leader>an", "<cmd>AerialNavToggle<CR>", { desc = "Aerial nav" })
+-- Symbol navigation (bracket-style like [d ]d for diagnostics)
+map("n", "[s", "<cmd>AerialPrev<CR>", { desc = "Prev symbol" })
+map("n", "]s", "<cmd>AerialNext<CR>", { desc = "Next symbol" })
+map("n", "[[", "<cmd>AerialPrevUp<CR>", { desc = "Prev symbol (up)" })
+map("n", "]]", "<cmd>AerialNextUp<CR>", { desc = "Next symbol (up)" })
+
 -- Floaterminal
 local floaterm = { buf = nil, win = nil }
 
@@ -417,10 +507,11 @@ end
 
 map("n", "<leader>tt", function() floaterm_open(false) end, { desc = "Toggle terminal" })
 map("n", "<leader>tn", function() floaterm_open(true) end, { desc = "New terminal" })
-map("t", "<Esc><Esc>", function() floaterm_open(false) end, { desc = "Close terminal" })
+map("t", "<C-q>", function() floaterm_open(false) end, { desc = "Close terminal" })
 
--- Amp
-require('amp').setup({ auto_start = true, log_level = "info" })
+map("n", "<leader>oa", function() require('opencode').ask() end, { desc = "opencode ask"})
+map("n", "<leader>os", function() require('opencode').select() end, { desc = "opencode select"})
+map("n", "<leader>oo", function() require('opencode').operator() end, { desc = "opencode operator"})
 
 -- Harpoon
 local harpoon = require("harpoon")
@@ -465,11 +556,11 @@ end, {
 
 -- Flash
 local flash = require("flash")
-vim.keymap.set({"n", "x", "o"}, "m", function() flash.jump() end)
-vim.keymap.set({"n", "x", "o"}, "M", function() flash.treesitter() end)
+vim.keymap.set({ "n", "x", "o" }, "m", function() flash.jump() end)
+vim.keymap.set({ "n", "x", "o" }, "M", function() flash.treesitter() end)
 vim.keymap.set("o", "r", function() flash.remote() end)
-vim.keymap.set({"x", "o"}, "R", function() flash.treesitter_search() end)
-vim.keymap.set({"c"}, "<c-s>", function() flash.toggle() end)
+vim.keymap.set({ "x", "o" }, "R", function() flash.treesitter_search() end)
+vim.keymap.set({ "c" }, "<c-s>", function() flash.toggle() end)
 
 -- Toggle previous & next buffers stored within Harpoon list
 vim.keymap.set("n", "<leader>hp", function() harpoon:list():prev() end)

@@ -1,2 +1,6 @@
+# local state should never enter the repo
+*.bak-*
 plugin/packer_compiled.lua
-
+.luarc.json
+.luarc.jsonc
+lazy-lock.json

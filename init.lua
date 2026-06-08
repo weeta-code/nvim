@@ -12,7 +12,7 @@ vim.g.maplocalleader = " "
 vim.g.netrw_liststyle = 3
 vim.g.tex_flavor = "latex"
 
-vim.o.shell = "/usr/bin/zsh"
+vim.o.shell = "/bin/zsh"
 vim.o.shellcmdflag = "-l -c"
 
 local opt = vim.opt
@@ -36,7 +36,7 @@ opt.splitbelow = true
 opt.termguicolors = true
 opt.completeopt = "menu,menuone,noinsert,fuzzy"
 opt.winborder = "rounded" -- 0.11+ default border for floating windows
-
+opt.autochdir = true
 vim.filetype.add({ extension = { tex = "tex" } })
 
 -- =============================================================================
@@ -73,6 +73,11 @@ vim.pack.add({
 
   -- Colorscheme
   { src = "https://github.com/oskarnurm/koda.nvim" },
+
+  -- Fun things
+  { src = "https://github.com/IogaMaster/tuxedo.nvim" },
+  { src = "https://github.com/sindrets/diffview.nvim" },
+  { src = "https://github.com/neogitorg/neogit" },
 })
 
 -- =============================================================================
@@ -91,16 +96,19 @@ require("koda").setup({
 })
 require("koda").load("dark")
 
--- Dashboard highlight palette (koda's semantic colors)
+-- Dashboard highlight palette (Koda dark)
 local hl = vim.api.nvim_set_hl
-hl(0, "RainbowCyan",                { fg = "#5abfb5" })
-hl(0, "RainbowBlue",                { fg = "#458ee6" })
-hl(0, "RainbowRed",                 { fg = "#ff7676" })
-hl(0, "RainbowGreen",               { fg = "#86cd82" })
-hl(0, "RainbowOrange",              { fg = "#ff5733" })
-hl(0, "RainbowYellow",              { fg = "#d9ba73" })
-hl(0, "RainbowBrightYellow",        { fg = "#d9ba73" })
-hl(0, "RainbowPurple",              { fg = "#f2a4db" })
+hl(0, "SnacksDashboardHeader",      { fg = "#b0b0b0" })
+hl(0, "SnacksDashboardIcon",        { fg = "#b0b0b0" })
+hl(0, "SnacksDashboardKey",         { fg = "#d9ba73" })
+hl(0, "SnacksDashboardDesc",        { fg = "#b0b0b0" })
+hl(0, "SnacksDashboardFile",        { fg = "#50585d" })
+hl(0, "SnacksDashboardDir",         { fg = "#777777" })
+hl(0, "SnacksDashboardTitle",       { fg = "#ffffff", bold = true })
+hl(0, "SnacksDashboardSpecial",     { fg = "#458ee6" })
+hl(0, "TuxedoFloatNormal",          { fg = "#b0b0b0", bg = "#101010" })
+hl(0, "TuxedoFloatBorder",          { fg = "#50585d", bg = "#101010" })
+hl(0, "TuxedoFloatTitle",           { fg = "#d9ba73", bg = "#101010", bold = true })
 
 -- =============================================================================
 -- Keymaps (basic editing)
@@ -115,7 +123,7 @@ map("n", "<leader>sh", "<C-w>s",              { desc = "Split horizontally" })
 map("n", "<leader>se", "<C-w>=",              { desc = "Equalize splits" })
 map("n", "<leader>sx", "<cmd>close<CR>",      { desc = "Close split" })
 map("n", "<leader>to", "<cmd>tabnew<CR>",     { desc = "New tab" })
-map("n", "<leader>tx", "<cmd>tabclose<CR>",   { desc = "Close tab" })
+map("n", "<leader>tc", "<cmd>tabclose<CR>",   { desc = "Close tab" })
 map("n", "<leader>tn", "<cmd>tabn<CR>",       { desc = "Next tab" })
 map("n", "<leader>tp", "<cmd>tabp<CR>",       { desc = "Prev tab" })
 -- Terminal-mode window jumps
@@ -186,6 +194,62 @@ require("oil").setup({
 map("n", "-",          function() require("oil").open() end, { desc = "Oil parent dir" })
 map("n", "<leader>ee", "<cmd>Oil --float<CR>",               { desc = "Oil (floating)" })
 map("n", "<leader>ef", "<cmd>Oil<CR>",                       { desc = "Oil (full)" })
+
+-- =============================================================================
+-- Tuxedo.nvim
+-- =============================================================================
+local function open_tuxedo()
+  require("tuxedo").tuxedo()
+  vim.api.nvim_set_option_value("winhighlight",
+    "NormalFloat:TuxedoFloatNormal,FloatBorder:TuxedoFloatBorder,FloatTitle:TuxedoFloatTitle",
+    { win = vim.api.nvim_get_current_win() })
+end
+
+map("n", "<leader>tx", "<cmd>Tuxedo<CR>", { desc = "Tuxedo (todo.txt app)" })
+
+-- =============================================================================
+-- Neogit
+-- =============================================================================
+map("n", "<leader>gg", "<cmd>Neogit<CR>", { desc = "Neogit (git client)" })
+
+-- -- =============================================================================
+-- -- Ekphos
+-- -- =============================================================================
+--
+-- local function launch_ekphos()
+--   local buf = vim.api.nvim_create_buf(false, true)
+--
+--   local width  = math.floor(vim.o.columns * 0.8)
+--   local height = math.floor(vim.o.lines   * 0.8)
+--
+--   local win = vim.api.nvim_open_win(buf, true, {
+--     relative = 'editor',
+--     width  = width,
+--     height = height,
+--     col    = math.floor((vim.o.columns - width)  / 2),
+--     row    = math.floor((vim.o.lines   - height) / 2),
+--     border = 'rounded',
+--   })
+--
+--   local chan = vim.fn.termopen(vim.o.shell)
+--
+--
+--   return buf, win, chan
+-- end
+--
+-- local function ekphos()
+--   local buf_id, win_id, chan_id = launch_ekphos()
+--
+--   local cmd = "ekphos\n"
+--
+--   vim.defer_fn(function()
+--     if vim.api.nvim_buf_is_valid(buf_id) and vim.api.nvim_win_is_valid(win_id) then
+--       vim.api.nvim_chan_send(chan_id, cmd)
+--     end
+--   end, 1000)
+-- end
+--
+-- map("n", "<leader>ep", function() ekphos() end, { desc = "Launch a terminal instance running ekphos" } )
 
 -- =============================================================================
 -- Treesitter (parsers + queries; built-in highlight)
@@ -270,6 +334,35 @@ vim.lsp.enable({ "clangd", "lua_ls", "sourcekit", "ts_ls", "pyright", "gopls", "
 -- snacks.nvim — picker (replaces telescope), terminal (replaces floaterm),
 -- ui.input/select (replaces dressing), dashboard, gitbrowse, zen, scratch
 -- =============================================================================
+local function pad_dashboard_header(header)
+  local lines = vim.split(header, "\n", { plain = true })
+  local width = 0
+  for _, line in ipairs(lines) do
+    width = math.max(width, vim.fn.strdisplaywidth(line))
+  end
+  for i, line in ipairs(lines) do
+    lines[i] = line .. (" "):rep(width - vim.fn.strdisplaywidth(line))
+  end
+  return table.concat(lines, "\n")
+end
+
+local dashboard_header = pad_dashboard_header([[
+                                              s                
+  x=~                                        :8                
+ 88x.   .e.   .e.                           .88                
+'8888X.x888:.x888       .u         .u      :888ooo       u     
+ `8888  888X '888k   ud8888.    ud8888.  -*8888888    us888u.  
+  X888  888X  888X :888'8888. :888'8888.   8888    .@88 "8888" 
+  X888  888X  888X d888 '88%" d888 '88%"   8888    9888  9888  
+  X888  888X  888X 8888.+"    8888.+"      8888    9888  9888  
+ .X888  888X. 888~ 8888L      8888L       .8888Lu= 9888  9888  
+ `%88%``"*888Y"    '8888c. .+ '8888c. .+  ^%888*   9888  9888  
+   `~     `"        "88888%    "88888%      'Y"    "888*""888" 
+                      "YP'       "YP'               ^Y"   ^Y'  ]])
+                                                               
+                                                               
+                                                               
+
 require("snacks").setup({
   bigfile     = { enabled = true },
   bufdelete   = { enabled = true },
@@ -278,23 +371,13 @@ require("snacks").setup({
   picker      = { enabled = true },        -- replaces telescope
   quickfile   = { enabled = true },
   scratch     = { enabled = true },
-  terminal    = { enabled = true },        -- replaces floaterm
   words       = { enabled = true },
   zen         = { enabled = true },
   dashboard = {
-    width    = 80,
-    pane_gap = 6,
+    width    = 48,
+    pane_gap = 32,
     preset = {
-      header = {
-        { " ▄█       █▄   ", hl = "RainbowRed" },    { "  ▄████████ ", hl = "RainbowOrange" },{ "   ▄████████", hl = "RainbowYellow" }, { "     ███    ", hl = "RainbowGreen" },{ "   ▄████████ \n", hl = "RainbowCyan" },
-        { " ███     ███", hl = "RainbowRed" },     { "   ███    ███", hl = "RainbowOrange" },{ "   ███    ███", hl = "RainbowYellow" },{ " ▀█████████▄ ", hl = "RainbowGreen" },{ "  ███    ███ \n", hl = "RainbowCyan" },
-        { " ███     ███", hl = "RainbowRed" },     { "   ███    █▀ ", hl = "RainbowOrange" },{ "   ███    █▀ ", hl = "RainbowYellow" },{ "    ▀███▀▀██ ", hl = "RainbowGreen" },{ "  ███    ███ \n", hl = "RainbowCyan" },
-        { " ███     ███", hl = "RainbowRed" },     { "  ▄███▄▄▄    ", hl = "RainbowOrange" },{ "  ▄███▄▄▄    ", hl = "RainbowYellow" },{ "     ███   ▀ ", hl = "RainbowGreen" },{ "  ███    ███ \n", hl = "RainbowCyan" },
-        { " ███     ███", hl = "RainbowRed" },     { " ▀▀███▀▀▀    ", hl = "RainbowOrange" },{ " ▀▀███▀▀▀    ", hl = "RainbowYellow" },{ "     ███     ", hl = "RainbowGreen" },{ "▀███████████ \n", hl = "RainbowCyan" },
-        { " ███     ███", hl = "RainbowRed" },     { "   ███    █▄ ", hl = "RainbowOrange" },{ "   ███    █▀ ", hl = "RainbowYellow" },{ "     ███     ", hl = "RainbowGreen" },{ "  ███    ███ \n", hl = "RainbowCyan" },
-        { " ███ ▄█▄ ███", hl = "RainbowRed" },     { "   ███    ███", hl = "RainbowOrange" },{ "   ███    ███", hl = "RainbowYellow" },{ "     ███     ", hl = "RainbowGreen" },{ "  ███    ███ \n", hl = "RainbowCyan" },
-        { "  ▀███▀███▀ ", hl = "RainbowRed" },     { "   ██████████", hl = "RainbowOrange" },{ "   ██████████", hl = "RainbowYellow" },{ "    ▄████▀   ", hl = "RainbowGreen" },{ "  ███    █▀  \n", hl = "RainbowCyan" },
-      },
+      header = dashboard_header,
       keys = {
         { icon = " ",  key = "e", desc = "New File",       action = ":ene | startinsert" },
         { icon = " ",  key = "o", desc = "File Explorer",  action = ":Oil --float" },
@@ -306,7 +389,6 @@ require("snacks").setup({
     sections = {
       { section = "header" },
       { section = "keys", gap = 1, padding = 1, pane = 1 },
-
       { section = "recent_files", icon = " ", title = "Recent Files", padding = 1, limit = 5 },
     },
   },

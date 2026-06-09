@@ -13,6 +13,10 @@
       "rev": "2f37a2ef66a8f8a18618cf625028a8e0b9df8f14",
       "src": "https://github.com/GooseRooster/cairn.nvim"
     },
+    "checkmate.nvim": {
+      "rev": "e57c8b502ab3e77e478e16460fcc2d2a16082f73",
+      "src": "https://github.com/bngarren/checkmate.nvim"
+    },
     "diffview.nvim": {
       "rev": "4516612fe98ff56ae0415a259ff6361a89419b0a",
       "src": "https://github.com/sindrets/diffview.nvim"
@@ -21,9 +25,21 @@
       "rev": "fcea7ff883235d9024dc41e638f164a450c14ca2",
       "src": "https://github.com/folke/flash.nvim"
     },
+    "haunt.nvim": {
+      "rev": "be28256ec96d39bf3951966b72c7b34519019993",
+      "src": "https://github.com/TheNoeTrevino/haunt.nvim"
+    },
     "indent-blankline.nvim": {
       "rev": "d28a3f70721c79e3c5f6693057ae929f3d9c0a03",
       "src": "https://github.com/lukas-reineke/indent-blankline.nvim"
+    },
+    "inrainbows.vim": {
+      "rev": "1dd0f30e05603230be5090902298c834933a22b8",
+      "src": "https://github.com/catriverr/inrainbows.vim"
+    },
+    "jj.nvim": {
+      "rev": "33179e2f15cd48b1a661f5a47088aa981c4ec0b5",
+      "src": "https://github.com/NicolasGB/jj.nvim"
     },
     "koda.nvim": {
       "rev": "a9caf0ef4efde02a21e0d53c1fb2aca91441c173",
@@ -49,6 +65,10 @@
       "rev": "8bf86a06ff9c237fbaadbc3c1b8ac0bcc22197fa",
       "src": "https://github.com/NicholasZolton/neojj"
     },
+    "nvim-navic": {
+      "rev": "f5eba192f39b453675d115351808bd51276d9de5",
+      "src": "https://github.com/SmiteshP/nvim-navic"
+    },
     "nvim-treesitter": {
       "rev": "4916d6592ede8c07973490d9322f187e07dfefac",
       "src": "https://github.com/nvim-treesitter/nvim-treesitter"
@@ -61,6 +81,14 @@
       "rev": "0fcc83805ad11cf714a949c98c605ed717e0b83e",
       "src": "https://github.com/stevearc/oil.nvim"
     },
+    "org-gcal-sync": {
+      "rev": "62cf332fd38096ed6e2d07654c1d314b5a9d2b48",
+      "src": "https://github.com/eprislac/org-gcal-sync"
+    },
+    "orgmode": {
+      "rev": "b3b58f74fdce1e91ccfd35ee344972bfac0f1892",
+      "src": "https://github.com/nvim-orgmode/orgmode"
+    },
     "plenary.nvim": {
       "rev": "74b06c6c75e4eeb3108ec01852001636d85a932b",
       "src": "https://github.com/nvim-lua/plenary.nvim"
@@ -72,6 +100,14 @@
     "snacks.nvim": {
       "rev": "ad9ede6a9cddf16cedbd31b8932d6dcdee9b716e",
       "src": "https://github.com/folke/snacks.nvim"
+    },
+    "tabout.nvim": {
+      "rev": "9a3499480a8e53dcaa665e2836f287e3b7764009",
+      "src": "https://github.com/abecodes/tabout.nvim"
+    },
+    "taskwarrior.nvim": {
+      "rev": "81e93d7ca72e859e54c11f6b292bc89a27f9b4c8",
+      "src": "https://github.com/MattHandzel/taskwarrior.nvim"
     },
     "tuxedo.nvim": {
       "rev": "dcdfb10aca45ad366d83262f08e46feac1d8baf7",
@@ -88,6 +124,10 @@
     "which-key.nvim": {
       "rev": "3aab2147e74890957785941f0c1ad87d0a44c15a",
       "src": "https://github.com/folke/which-key.nvim"
+    },
+    "zk-nvim": {
+      "rev": "bc3b39374b25fad977cecc936588cb060f15a773",
+      "src": "https://github.com/zk-org/zk-nvim"
     }
   }
 }

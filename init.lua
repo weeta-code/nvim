@@ -75,9 +75,12 @@ vim.pack.add({
   { src = "https://github.com/oskarnurm/koda.nvim" },
 
   -- Fun things
-  { src = "https://github.com/IogaMaster/tuxedo.nvim" },
+  { src = "https://github.com/NicolasGB/jj.nvim" },
+  { src = "https://github.com/TheNoeTrevino/haunt.nvim" },
+  { src = "https://github.com/bngarren/checkmate.nvim" },
+  { src = "https://github.com/SmiteshP/nvim-navic" },
+  { src = "https://github.com/zk-org/zk-nvim" },
   { src = "https://github.com/sindrets/diffview.nvim" },
-  { src = "https://github.com/neogitorg/neogit" },
 })
 
 -- =============================================================================
@@ -106,9 +109,6 @@ hl(0, "SnacksDashboardFile",        { fg = "#50585d" })
 hl(0, "SnacksDashboardDir",         { fg = "#777777" })
 hl(0, "SnacksDashboardTitle",       { fg = "#ffffff", bold = true })
 hl(0, "SnacksDashboardSpecial",     { fg = "#458ee6" })
-hl(0, "TuxedoFloatNormal",          { fg = "#b0b0b0", bg = "#101010" })
-hl(0, "TuxedoFloatBorder",          { fg = "#50585d", bg = "#101010" })
-hl(0, "TuxedoFloatTitle",           { fg = "#d9ba73", bg = "#101010", bold = true })
 
 -- =============================================================================
 -- Keymaps (basic editing)
@@ -146,7 +146,19 @@ vim.api.nvim_create_autocmd("BufEnter", {
 -- UI plugins
 -- =============================================================================
 require("nvim-web-devicons").setup({ default = true })
-require("lualine").setup({})
+require("lualine").setup({
+  options = {
+    component_separators = { left = "", right = "" },
+    section_separators = { left = "", right = "" },
+    globalstatus = true,
+  },
+  sections = {
+    lualine_z = {
+      { "tabs", use_mode_colors = true, show_modified_status = false, mode = 1,
+        fmt = function(_, ctx) return ctx.current and "" or "" end}
+    },
+  },
+})
 require("ibl").setup({ indent = { char = "┊" } })
 require("which-key").setup({})
 
@@ -155,6 +167,14 @@ require("smear_cursor").setup({
   smear_insert_mode = true,
   smear_between_neighbor_lines = true,
 })
+
+local navic = require("nvim-navic")
+
+local on_attach = function(client, bufnr)
+  if client.server_capabilities.documentSymbolProvider then
+    navic.attach(client, bufnr)
+  end
+end
 
 -- =============================================================================
 -- mini.nvim (pairs + surround)
@@ -171,10 +191,10 @@ require("mini.surround").setup({
 local flash = require("flash")
 flash.setup()
 map({ "n", "x", "o" }, "m", flash.jump,                { desc = "Flash jump" })
-map({ "n", "x", "o" }, "M", flash.treesitter,          { desc = "Flash treesitter" })
-map("o",               "r", flash.remote,              { desc = "Flash remote" })
-map({ "x", "o" },      "R", flash.treesitter_search,   { desc = "Flash treesitter search" })
-map("c",               "<C-s>", flash.toggle,          { desc = "Flash toggle in cmdline" })
+-- map({ "n", "x", "o" }, "Mu", flash.treesitter,          { desc = "Flash treesitter" })
+-- map("o",               "r", flash.remote,              { desc = "Flash remote" })
+-- map({ "x", "o" },      "R", flash.treesitter_search,   { desc = "Flash treesitter search" })
+-- map("c",               "<C-s>", flash.toggle,          { desc = "Flash toggle in cmdline" })
 
 -- =============================================================================
 -- oil.nvim
@@ -196,61 +216,317 @@ map("n", "<leader>ee", "<cmd>Oil --float<CR>",               { desc = "Oil (floa
 map("n", "<leader>ef", "<cmd>Oil<CR>",                       { desc = "Oil (full)" })
 
 -- =============================================================================
--- Tuxedo.nvim
+-- diffview
 -- =============================================================================
-local function open_tuxedo()
-  require("tuxedo").tuxedo()
-  vim.api.nvim_set_option_value("winhighlight",
-    "NormalFloat:TuxedoFloatNormal,FloatBorder:TuxedoFloatBorder,FloatTitle:TuxedoFloatTitle",
-    { win = vim.api.nvim_get_current_win() })
+require("diffview").setup({
+  view = {
+    default = {
+      layout = "diff2_vertical",
+    },
+    merge_tool = {
+      layout = "diff3_mixed",
+    },
+    file_history_view = {
+      layout = "diff2_vertical"
+    }
+  },
+
+})
+
+-- =============================================================================
+-- JJ
+-- =============================================================================
+require("jj").setup({
+  picker = { snacks = {} },
+  editor = {
+    auto_insert = false,
+    window = {
+      type = "floating",
+      floating_width = 0.8,
+      floating_height = 0.9
+    },
+  },
+
+  terminal = {
+    cursor_render_delay = 10,
+  },
+  
+  diff = {
+    backend = "diffview",
+  },
+
+  keymaps = {
+    -- Log buffer keymaps (set to nil to disable)
+    log = {
+      edit = "<CR>",                      -- Edit revision under cursor
+      edit_immutable = "<S-CR>",          -- Edit revision (ignore immutability)
+      describe = "d",                     -- Describe revision under cursor
+      diff = "<S-d>",                     -- Diff revision under cursor
+      edit = "e",                         -- Edit revision under cursor
+      new = "n",                          -- Create new change branching off
+      new_after = "<C-n>",                -- Create new change after revision
+      new_after_immutable = "<S-n>",      -- Create new change after (ignore immutability)
+      undo = "<S-u>",                     -- Undo last operation
+      redo = "<S-r>",                     -- Redo last undone operation
+      abandon = "a",                      -- Abandon revision under cursor
+      bookmark = "b",                     -- Create or move bookmark to revision under cursor
+      bookmark_del = "B",                 -- Delete bookmark of revision under cursor
+      fetch = "f",                        -- Fetch from remote
+      push = "p",                         -- Push bookmark of revision under cursor
+      push_all = "<S-p>",                 -- Push all changes to remote
+      open_pr = "o",                      -- Open PR/MR for revision under cursor
+      open_pr_list = "<S-o>",             -- Open PR/MR by selecting from all bookmarks
+      rebase = "r",                       -- Enter rebase mode targeting revision under cursor or selected revisions
+      rebase_mode = {
+        onto = { "<CR>", "o" },           -- Select revision under cursor as rebase onto destination
+        after = "a",                      -- Rebase after revision under cursor
+        before = "b",                     -- Rebase before revision under cursor
+        onto_immutable = { "<S-CR>", "<S-o>" }, -- Select revision  as a rebase onto destination (ignore immutability)
+        after_immutable = "<S-a>",              -- Rebase after revision under cursor (ignore immutability)
+        before_immutable = "<S-b>",             -- Rebase before revision under cursor (ignore immutability)
+        exit_mode = { "<Esc>", "<C-c>" }, -- Exit rebase mode
+      },
+      duplicate = "<C-y>",                -- Enter duplicate mode targeting revision under cursor or selected revisions
+      duplicate_mode = {
+        onto = { "<CR>", "o" },           -- Select revision under cursor as duplicate onto destination
+        after = "a",                      -- Duplicate after revision under cursor
+        before = "b",                     -- Duplicate before revision under cursor
+        onto_immutable = { "<S-CR>", "<S-o>" }, -- Duplicate onto revision under cursor (ignore immutability)
+        after_immutable = "<S-a>",              -- Duplicate after revision under cursor (ignore immutability)
+        before_immutable = "<S-b>",             -- Duplicate before revision under cursor (ignore immutability)
+        exit_mode = { "<Esc>", "<C-c>" }, -- Exit duplicate mode
+      },
+      squash = "s",                       -- Enter squash mode targeting revision under cursor or selected revisions
+      squash_mode = {
+        into = "<CR>",                     -- Squash into revision under cursor
+        into_immutable = "<S-CR>",         -- Squash into revision under cursor (ignore immutability)
+        exit_mode = { "<Esc>", "<C-c>" }, -- Exit squash mode
+      },
+      quick_squash = "<S-s>",             -- Quick squash revision under cursor into its parent (ignore immutability)
+      split = "<C-s>",                    -- Split the revision under cursor
+      history = "<S-h>",                  -- Show a history-aware diff for the selected revision range
+      change_revset = "<C-r>",            -- Change the revset(s) being viewed in the log buffer
+      tag_set = "<S-t>",                  -- Create a tag on the revision under cursor
+      summary = "<S-k>",                  -- Show summary tooltip for revision under cursor
+      select_next_revision = "gj",        -- Move cursor to the next revision in the log
+      select_prev_revision = "gk",        -- Move cursor to the previous revision in the log
+      summary_tooltip = {
+        diff = "<S-d>",                   -- Diff file at this revision
+        edit = "<CR>",                    -- Edit revision and open file
+        edit_immutable = "<S-CR>",        -- Edit revision (ignore immutability) and open file
+        edit_file = "o",                  -- Open the file under cursor in a new tab like `:Jtabedit` would
+      },
+    },
+    -- Status buffer keymaps (set to nil to disable)
+    status = {
+      open_file = "<CR>",                 -- Open file under cursor
+      restore_file = "<S-x>",             -- Restore file under cursor
+    },
+    -- Close keymaps (shared across all buffers)
+    close = { "q", "<Esc>" },
+    -- Floating buffer keymaps
+    floating = {
+      close = "q",                          -- Close floating buffer
+      hide = "<Esc>",                       -- Hide floating buffer
+    },
+  },
+})
+
+-- =============================================================================
+-- Haunt.nvim
+-- =============================================================================
+do
+  local ok, project = pcall(require, "haunt.project")
+  if ok then
+    -- Haunt runs several git probes during UIEnter and bookmark saves. Using
+    -- vim.system avoids the slow shell path behind vim.fn.systemlist().
+    project.run_git = function(cmd)
+      local args = vim.split(cmd, " ", { trimempty = true })
+      if args[1] ~= "git" then
+        return nil
+      end
+
+      local result = vim.system(args, { text = true }):wait()
+      if result.code ~= 0 then
+        return nil
+      end
+
+      local stdout = vim.trim(result.stdout or "")
+      if stdout == "" then
+        return { "" }
+      end
+      return vim.split(stdout, "\n", { plain = true })
+    end
+
+    -- Persistence fix: haunt keys each storage file by project identity
+    -- (git root-commit -> git toplevel -> cwd), so bookmarks scatter by repo /
+    -- launch dir and get swapped out on any global :cd. We always want ONE
+    -- global store: marks persist everywhere, survive cwd changes, and stay put
+    -- regardless of whether a file lives in a git repo. (fzf/telescope are
+    -- already dir-scoped; haunt is the cross-everything layer.)
+    project.get_info = function()
+      return { root = nil, branch = nil, project_id = "haunt-global" }
+    end
+  end
 end
 
-map("n", "<leader>tx", "<cmd>Tuxedo<CR>", { desc = "Tuxedo (todo.txt app)" })
+map('n', '<leader>hm', function() require('haunt.api').toggle_annotation() end,
+{ desc = "Toggle bookmark annotation" })
+
+-- Navigate bookmarks
+map('n', '<leader>hn', function() require('haunt.api').next() end,
+{ desc = "Next bookmark" })
+map('n', '<leader>hp', function() require('haunt.api').prev() end,
+{ desc = "Previous bookmark" })
+
+-- Annotate bookmark
+map('n', '<leader>ha', function() require('haunt.api').annotate() end,
+{ desc = "Annotate bookmark" })
+
+-- Delete bookmark
+map('n', '<leader>hd', function() require('haunt.api').delete() end,
+{ desc = "Delete bookmark" })
+
+-- Clear bookmarks
+map('n', '<leader>hc', function() require('haunt.api').clear() end,
+{ desc = "Clear bookmarks in file" })
+map('n', '<leader>hC', function() require('haunt.api').clear_all() end,
+{ desc = "Clear all bookmarks" })
+
+-- List bookmarks
+map('n', '<leader>hl', function() require('haunt.picker').show() end,
+{ desc = "List bookmarks" })
 
 -- =============================================================================
--- Neogit
+-- Checkmate
 -- =============================================================================
-map("n", "<leader>gg", "<cmd>Neogit<CR>", { desc = "Neogit (git client)" })
+require("checkmate").setup({
+  files = { "/home/vectors/todo.md", "todo.md", "TODO.md" },
+  -- Metadata tags. The built-in @priority/@started/@done stay as-is (keys
+  -- <leader>Tp/Ts/Td); this block only ADDS @due. Naming an existing tag here
+  -- would REPLACE it wholesale (no field merge), so we leave those alone.
+  metadata = {
+    -- @due(YYYY-MM-DD) — goes red+bold once the date is past
+    due = {
+      style = function(context)
+        local y, m, d = tostring(context.value):match("(%d+)-(%d+)-(%d+)")
+        if y then
+          local due_at = os.time({ year = tonumber(y), month = tonumber(m), day = tonumber(d), hour = 23, min = 59 })
+          if due_at < os.time() then
+            return { fg = "#ff5555", bold = true } -- overdue
+          end
+        end
+        return { fg = "#f1fa8c" } -- upcoming
+      end,
+      get_value = function()
+        return tostring(os.date("%Y-%m-%d")) -- defaults to today; edit to your deadline
+      end,
+      key = "<leader>Tu",
+      sort_order = 15,           -- sits between @priority (10) and @started (20)
+      jump_to_on_insert = "value",
+      select_on_insert = true,   -- drops cursor onto the date so you can type it
+    },
+  },
+  keys = {
+    ["<leader>bb"] = {
+      rhs = "<cmd>Checkmate toggle<CR>",
+      desc = "Toggle todo item",
+      modes = { "n", "v" },
+    },
+    ["<leader>bc"] = {
+      rhs = "<cmd>Checkmate check<CR>",
+      desc = "Set todo item as checked (done)",
+      modes = { "n", "v" },
+    },
+    ["<leader>bu"] = {
+      rhs = "<cmd>Checkmate uncheck<CR>",
+      desc = "Set todo item as unchecked (not done)",
+      modes = { "n", "v" },
+    },
+    ["<leader>b="] = {
+      rhs = "<cmd>Checkmate cycle_next<CR>",
+      desc = "Cycle todo item(s) to the next state",
+      modes = { "n", "v" },
+    },
+    ["<leader>b-"] = {
+      rhs = "<cmd>Checkmate cycle_previous<CR>",
+      desc = "Cycle todo item(s) to the previous state",
+      modes = { "n", "v" },
+    },
+    ["<leader>bn"] = {
+      rhs = "<cmd>Checkmate create<CR>",
+      desc = "Create todo item",
+      modes = { "n", "v" },
+    },
+    ["<leader>br"] = {
+      rhs = "<cmd>Checkmate remove<CR>",
+      desc = "Remove todo marker (convert to text)",
+      modes = { "n", "v" },
+    },
+    ["<leader>bR"] = {
+      rhs = "<cmd>Checkmate remove_all_metadata<CR>",
+      desc = "Remove all metadata from a todo item",
+      modes = { "n", "v" },
+    },
+    ["<leader>ba"] = {
+      rhs = "<cmd>Checkmate archive<CR>",
+      desc = "Archive checked/completed todo items (move to bottom section)",
+      modes = { "n" },
+    },
+    ["<leader>bF"] = {
+      rhs = "<cmd>Checkmate select_todo<CR>",
+      desc = "Open a picker to select a todo from the current buffer",
+      modes = { "n" },
+    },
+    ["<leader>bv"] = {
+      rhs = "<cmd>Checkmate metadata select_value<CR>",
+      desc = "Update the value of a metadata tag under the cursor",
+      modes = { "n" },
+    },
+    ["<leader>b]"] = {
+      rhs = "<cmd>Checkmate metadata jump_next<CR>",
+      desc = "Move cursor to next metadata tag",
+      modes = { "n" },
+    },
+    ["<leader>b["] = {
+      rhs = "<cmd>Checkmate metadata jump_previous<CR>",
+      desc = "Move cursor to previous metadata tag",
+      modes = { "n" },
+    },
+  }
+})
 
--- -- =============================================================================
--- -- Ekphos
--- -- =============================================================================
---
--- local function launch_ekphos()
---   local buf = vim.api.nvim_create_buf(false, true)
---
---   local width  = math.floor(vim.o.columns * 0.8)
---   local height = math.floor(vim.o.lines   * 0.8)
---
---   local win = vim.api.nvim_open_win(buf, true, {
---     relative = 'editor',
---     width  = width,
---     height = height,
---     col    = math.floor((vim.o.columns - width)  / 2),
---     row    = math.floor((vim.o.lines   - height) / 2),
---     border = 'rounded',
---   })
---
---   local chan = vim.fn.termopen(vim.o.shell)
---
---
---   return buf, win, chan
--- end
---
--- local function ekphos()
---   local buf_id, win_id, chan_id = launch_ekphos()
---
---   local cmd = "ekphos\n"
---
---   vim.defer_fn(function()
---     if vim.api.nvim_buf_is_valid(buf_id) and vim.api.nvim_win_is_valid(win_id) then
---       vim.api.nvim_chan_send(chan_id, cmd)
---     end
---   end, 1000)
--- end
---
--- map("n", "<leader>ep", function() ekphos() end, { desc = "Launch a terminal instance running ekphos" } )
+map("n", "<leader>bw", function() vim.cmd("edit " .. vim.fn.fnameescape(vim.fn.expand("/home/vectors/todo.md"))) end, { desc = "open global tasks" })
+-- =============================================================================
 
+-- =============================================================================
+-- zk — zettelkasten notes (notebook at ~/notes, set via ZK_NOTEBOOK_DIR)
+-- =============================================================================
+require("zk").setup({
+  picker = "snacks_picker",          -- reuse snacks.nvim; no new picker dependency
+  lsp = {
+    config = { cmd = { "zk", "lsp" }, name = "zk" },
+    auto_attach = { enabled = true }, -- link completion etc., only active inside a notebook
+  },
+})
+
+local zk = require("zk")
+local zkc = require("zk.commands")
+
+map("n", "<leader>zn", function() zk.new({ title = vim.fn.input("Title: ") }) end,
+  { desc = "zk: new note" })
+map("n", "<leader>zo", function() zkc.get("ZkNotes")({ sort = { "modified" } }) end,
+  { desc = "zk: open / list notes" })
+map("n", "<leader>zf", function() zkc.get("ZkNotes")({ sort = { "modified" }, match = { vim.fn.input("Search: ") } }) end,
+  { desc = "zk: search notes (full-text)" })
+map("n", "<leader>zt", function() zkc.get("ZkTags")() end,
+  { desc = "zk: browse tags" })
+map("n", "<leader>zb", function() zkc.get("ZkBacklinks")() end,
+  { desc = "zk: backlinks for this note" })
+map("n", "<leader>zl", function() zkc.get("ZkInsertLink")() end,
+  { desc = "zk: insert link to a note" })
+map("v", "<leader>zn", ":'<,'>ZkNewFromTitleSelection<CR>",
+  { desc = "zk: new note from selection" })
 -- =============================================================================
 -- Treesitter (parsers + queries; built-in highlight)
 -- =============================================================================
@@ -307,6 +583,13 @@ local capabilities = require("blink.cmp").get_lsp_capabilities()
 vim.api.nvim_create_autocmd("LspAttach", {
   callback = function(args)
     local buf = args.buf
+    local client = vim.lsp.get_client_by_id(args.data.client_id)
+    if not client then
+      return
+    end
+
+    on_attach(client, buf)
+
     local o = { buffer = buf }
     map("n", "gd",         vim.lsp.buf.definition,     o)
     map("n", "gr",         vim.lsp.buf.references,     o)
@@ -329,6 +612,7 @@ vim.lsp.config("gopls",    { capabilities = capabilities })
 vim.lsp.config("texlab",   { capabilities = capabilities, cmd = { "texlab" }, filetypes = { "tex", "plaintex", "bib" }, root_markers = { ".git", ".latexmkrc", "Makefile", ".texlabroot" } })
 
 vim.lsp.enable({ "clangd", "lua_ls", "sourcekit", "ts_ls", "pyright", "gopls", "texlab" })
+
 
 -- =============================================================================
 -- snacks.nvim — picker (replaces telescope), terminal (replaces floaterm),

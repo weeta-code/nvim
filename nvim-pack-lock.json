@@ -9,6 +9,10 @@
       "src": "https://github.com/saghen/blink.cmp",
       "version": "1.0.0 - 2.0.0"
     },
+    "cairn.nvim": {
+      "rev": "2f37a2ef66a8f8a18618cf625028a8e0b9df8f14",
+      "src": "https://github.com/GooseRooster/cairn.nvim"
+    },
     "diffview.nvim": {
       "rev": "4516612fe98ff56ae0415a259ff6361a89419b0a",
       "src": "https://github.com/sindrets/diffview.nvim"
@@ -40,6 +44,10 @@
     "neogit": {
       "rev": "99326a1310fb2d616b455d2fd16d01bf00682f06",
       "src": "https://github.com/neogitorg/neogit"
+    },
+    "neojj": {
+      "rev": "8bf86a06ff9c237fbaadbc3c1b8ac0bcc22197fa",
+      "src": "https://github.com/NicholasZolton/neojj"
     },
     "nvim-treesitter": {
       "rev": "4916d6592ede8c07973490d9322f187e07dfefac",

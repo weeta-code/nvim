@@ -78,9 +78,13 @@ vim.pack.add({
   { src = "https://github.com/NicolasGB/jj.nvim" },
   { src = "https://github.com/TheNoeTrevino/haunt.nvim" },
   { src = "https://github.com/bngarren/checkmate.nvim" },
-  { src = "https://github.com/SmiteshP/nvim-navic" },
   { src = "https://github.com/zk-org/zk-nvim" },
+  { src = "https://github.com/SmiteshP/nvim-navic" },
   { src = "https://github.com/sindrets/diffview.nvim" },
+  { src = "https://github.com/nvim-orgmode/orgmode" },
+
+  -- AI (local MLX 7B + OpenRouter)
+  { src = "https://github.com/olimorris/codecompanion.nvim" },
 })
 
 -- =============================================================================
@@ -370,6 +374,11 @@ do
   end
 end
 
+require("haunt").setup({
+  picker = "snacks",
+  per_branch_bookmarks = false,
+})
+
 map('n', '<leader>hm', function() require('haunt.api').toggle_annotation() end,
 { desc = "Toggle bookmark annotation" })
 
@@ -527,6 +536,46 @@ map("n", "<leader>zl", function() zkc.get("ZkInsertLink")() end,
   { desc = "zk: insert link to a note" })
 map("v", "<leader>zn", ":'<,'>ZkNewFromTitleSelection<CR>",
   { desc = "zk: new note from selection" })
+
+-- =============================================================================
+-- Orgmode — active agenda/capture over ~/org
+-- =============================================================================
+require("orgmode").setup({
+  org_agenda_files = { "~/org/**/*" },
+  org_default_notes_file = "~/org/inbox.org",
+  org_archive_location = "~/org/archive.org::",
+  org_todo_keywords = { "TODO(t)", "NEXT(n)", "WAITING(w)", "|", "DONE(d)", "CANCELED(c)" },
+  org_capture_templates = {
+    i = {
+      description = "Inbox",
+      template = "* TODO %?\n:PROPERTIES:\n:CAPTURED: %U\n:END:\n%a",
+      target = "~/org/inbox.org",
+    },
+    t = {
+      description = "Todo",
+      template = "* TODO %?\n:PROPERTIES:\n:CAPTURED: %U\n:END:\n%a",
+      target = "~/org/todo.org",
+    },
+    n = {
+      description = "Note",
+      template = "* %?\n:PROPERTIES:\n:CAPTURED: %U\n:END:\n%a",
+      target = "~/org/notes.org",
+    },
+  },
+  mappings = {
+    global = {
+      org_agenda = "<leader>oa",
+      org_capture = "<leader>oc",
+    },
+  },
+})
+
+map("n", "<leader>oi", function() vim.cmd("edit " .. vim.fn.fnameescape(vim.fn.expand("~/org/inbox.org"))) end,
+  { desc = "org: open inbox" })
+map("n", "<leader>ot", function() vim.cmd("edit " .. vim.fn.fnameescape(vim.fn.expand("~/org/todo.org"))) end,
+  { desc = "org: open todo" })
+map("n", "<leader>on", function() vim.cmd("edit " .. vim.fn.fnameescape(vim.fn.expand("~/org/notes.org"))) end,
+  { desc = "org: open notes" })
 -- =============================================================================
 -- Treesitter (parsers + queries; built-in highlight)
 -- =============================================================================
@@ -758,3 +807,43 @@ vim.api.nvim_create_autocmd({ "TextChanged", "TextChangedI" }, {
   callback = function() vim.cmd("silent! update") end,
 })
 map("n", "<leader>lc", "<cmd>VimtexCompile<CR>", { desc = "VimTeX compile" })
+
+-- =============================================================================
+-- AI — codecompanion (local MLX 7B + OpenRouter → DeepSeek V4 Flash via Wafer)
+-- =============================================================================
+require("codecompanion").setup({
+  adapters = {
+    -- Self-hosted MLX Qwen2.5-Coder-7B on the mini (free, private, instant)
+    local_mlx = function()
+      return require("codecompanion.adapters").extend("openai_compatible", {
+        env = {
+          url      = "http://localhost:8080",
+          api_key  = "dummy",                  -- mlx_lm.server has no auth
+          chat_url = "/v1/chat/completions",
+        },
+        schema = { model = { default = "mlx-community/Qwen2.5-Coder-7B-Instruct-4bit" } },
+      })
+    end,
+    -- OpenRouter (your credits) → DeepSeek V4 Flash; routes to Wafer = cheap + fast
+    openrouter = function()
+      return require("codecompanion.adapters").extend("openai_compatible", {
+        env = {
+          url      = "https://openrouter.ai/api",
+          api_key  = "OPENROUTER_API_KEY",     -- read from $OPENROUTER_API_KEY
+          chat_url = "/v1/chat/completions",
+        },
+        schema = { model = { default = "deepseek/deepseek-v4-flash" } },
+      })
+    end,
+  },
+  strategies = {
+    chat   = { adapter = "openrouter" },        -- cheap-smart default for chat
+    inline = { adapter = "local_mlx" },         -- instant local for inline edits
+    cmd    = { adapter = "openrouter" },
+  },
+})
+
+map("n", "<leader>aa", "<cmd>CodeCompanionActions<CR>",     { desc = "AI: actions menu" })
+map("n", "<leader>ac", "<cmd>CodeCompanionChat Toggle<CR>", { desc = "AI: chat toggle" })
+map("v", "<leader>ac", "<cmd>CodeCompanionChat Toggle<CR>", { desc = "AI: chat toggle" })
+map("v", "<leader>ai", "<cmd>CodeCompanion<CR>",            { desc = "AI: inline (selection)" })
